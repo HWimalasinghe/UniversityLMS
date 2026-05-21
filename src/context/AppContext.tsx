@@ -1,13 +1,18 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { User, Faculty, Role } from '../types';
+import { User, Faculty, Role, StudentRequest, Degree } from '../types';
 
 interface AppContextType {
   users: User[];
   faculties: Faculty[];
+  degrees: Degree[];
+  studentRequests: StudentRequest[];
   addFaculty: (faculty: Omit<Faculty, 'id' | 'createdAt'>) => void;
+  addDegree: (degree: Omit<Degree, 'id'>) => void;
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
+  addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => void;
+  updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,9 +43,17 @@ const initialFaculties: Faculty[] = [
   }
 ];
 
+const initialDegrees: Degree[] = [
+  { id: 'd1', facultyId: 'f1', name: 'BSc in Computer Science' },
+  { id: 'd2', facultyId: 'f1', name: 'BSc in Mathematics' },
+  { id: 'd3', facultyId: 'f2', name: 'BSc in Software Engineering' },
+];
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [faculties, setFaculties] = useState<Faculty[]>(initialFaculties);
+  const [degrees, setDegrees] = useState<Degree[]>(initialDegrees);
+  const [studentRequests, setStudentRequests] = useState<StudentRequest[]>([]);
 
   const addFaculty = (faculty: Omit<Faculty, 'id' | 'createdAt'>) => {
     const newFaculty: Faculty = {
@@ -49,6 +62,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date().toISOString(),
     };
     setFaculties([...faculties, newFaculty]);
+  };
+
+  const addDegree = (degree: Omit<Degree, 'id'>) => {
+    const newDegree: Degree = {
+      ...degree,
+      id: Math.random().toString(36).substr(2, 9),
+    };
+    setDegrees([...degrees, newDegree]);
   };
 
   const addUser = (user: Omit<User, 'id' | 'createdAt'>) => {
@@ -68,8 +89,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setUsers(users.filter(u => u.id !== id));
   };
 
+  const addStudentRequest = (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => {
+    const newReq: StudentRequest = {
+      ...req,
+      id: Math.random().toString(36).substr(2, 9),
+      status: 'Pending',
+      createdAt: new Date().toISOString(),
+    };
+    setStudentRequests([...studentRequests, newReq]);
+  };
+
+  const updateStudentRequestStatus = (id: string, status: 'Approved' | 'Rejected') => {
+    setStudentRequests(studentRequests.map(r => r.id === id ? { ...r, status } : r));
+    if (status === 'Approved') {
+      const req = studentRequests.find(r => r.id === id);
+      if (req) {
+        addUser({
+          name: req.fullName,
+          email: req.referenceEmail,
+          role: 'Student',
+          facultyId: req.facultyId
+        });
+      }
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ users, faculties, addFaculty, addUser, updateUser, deleteUser }}>
+    <AppContext.Provider value={{ users, faculties, degrees, studentRequests, addFaculty, addDegree, addUser, updateUser, deleteUser, addStudentRequest, updateStudentRequestStatus }}>
       {children}
     </AppContext.Provider>
   );

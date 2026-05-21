@@ -13,7 +13,7 @@ export default function Login() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (login(email, password)) {
-      navigate('/');
+      navigate('/admin');
     } else {
       setError('Invalid email or password');
     }

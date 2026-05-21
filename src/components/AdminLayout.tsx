@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Building2, Users, LayoutDashboard, LogOut } from 'lucide-react';
+import { Building2, Users, LayoutDashboard, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout() {
@@ -14,9 +14,10 @@ export default function AdminLayout() {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Faculties', path: '/faculties', icon: Building2 },
-    { name: 'Users', path: '/users', icon: Users },
+    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { name: 'Faculties', path: '/admin/faculties', icon: Building2 },
+    { name: 'Users', path: '/admin/users', icon: Users },
+    { name: 'Requests', path: '/admin/requests', icon: FileText },
   ];
 
   return (

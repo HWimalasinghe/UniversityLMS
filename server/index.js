@@ -22,15 +22,24 @@ app.get('/api/health', (req, res) => {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.SMTP_USER || process.env.EMAIL_USER,
+    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
   },
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ SMTP transporter verification failed:', error.message);
+  } else {
+    console.log('✅ SMTP transporter is ready to send emails');
+  }
 });
 
 // ── POST /api/send-email ──────────────────────────────────────────────────────
 // Body: { to, studentName, studentId, universityEmail, password, faculty, degree }
 app.post('/api/send-email', async (req, res) => {
   const { to, studentName, studentId, universityEmail, password, faculty, degree } = req.body;
+  console.log('POST /api/send-email', { to, studentId, universityEmail, faculty, degree });
 
   if (!to || !studentId || !universityEmail || !password) {
     return res.status(400).json({ error: 'Missing required fields.' });

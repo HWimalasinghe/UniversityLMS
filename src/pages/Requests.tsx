@@ -2,14 +2,40 @@ import React from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Check, X, Clock } from 'lucide-react';
 
+type Notification = {
+  message: string;
+  type: 'success' | 'error';
+};
+
 export default function Requests() {
   const { studentRequests, faculties, users, updateStudentRequestStatus } = useAppContext();
+  const [notification, setNotification] = React.useState<Notification | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    window.setTimeout(() => setNotification(null), 4500);
+  };
+
+  const handleApprove = async (id: string) => {
+    const result = await updateStudentRequestStatus(id, 'Approved');
+    showNotification(result.message, result.success ? 'success' : 'error');
+  };
+
+  const handleReject = async (id: string) => {
+    const result = await updateStudentRequestStatus(id, 'Rejected');
+    showNotification(result.message, result.success ? 'success' : 'error');
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Student Admission Requests</h2>
       </div>
+      {notification && (
+        <div className={`rounded-xl px-4 py-3 text-sm font-medium ${notification.type === 'success' ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-red-200 bg-red-50 text-red-800'}`}>
+          {notification.message}
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {studentRequests.length === 0 ? (
@@ -77,13 +103,13 @@ export default function Requests() {
                   {req.status === 'Pending' && (
                     <div className="flex md:flex-col gap-3 items-end justify-center min-w-[120px]">
                       <button
-                        onClick={() => updateStudentRequestStatus(req.id, 'Approved')}
+                        onClick={() => handleApprove(req.id)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
                       >
                         <Check className="h-4 w-4" /> Approve
                       </button>
                       <button
-                        onClick={() => updateStudentRequestStatus(req.id, 'Rejected')}
+                        onClick={() => handleReject(req.id)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
                       >
                         <X className="h-4 w-4" /> Reject

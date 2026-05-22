@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Faculty, Role, StudentRequest, Degree } from '../types';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, Faculty, StudentRequest, Degree } from '../types';
 
 interface AppContextType {
   users: User[];
@@ -12,7 +12,7 @@ interface AppContextType {
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
   addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => void;
-  updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => void;
+  updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => Promise<{ success: boolean; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -115,15 +115,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     faculty: string,
     degree: string
-  ) => {
+  ): Promise<{ success: boolean; message: string }> => {
     try {
-      await fetch('http://localhost:5000/api/send-email', {
+      const response = await fetch('http://localhost:5000/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to, studentName, studentId, universityEmail, password, faculty, degree }),
       });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        return { success: false, message: responseData?.error || responseData?.message || 'Failed to send email.' };
+      }
+
+      return { success: true, message: responseData?.message || 'Offer email is sent' };
     } catch (err) {
-      console.warn('⚠️ Email service unavailable. Student created, but welcome email was not sent.', err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.warn('⚠️ Email service unavailable. Student created, but welcome email was not sent.', errorMessage);
+      return { success: false, message: `Email send failed: ${errorMessage}` };
     }
   };
 
@@ -171,36 +180,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setStudentRequests([...studentRequests, newReq]);
   };
 
-  const updateStudentRequestStatus = (id: string, status: 'Approved' | 'Rejected') => {
-    setStudentRequests(studentRequests.map(r => r.id === id ? { ...r, status } : r));
-    if (status === 'Approved') {
-      const req = studentRequests.find(r => r.id === id);
-      if (req) {
-        const studentId = generateStudentId(req.facultyId);
-        const universityEmail = `${studentId}@unilms.lk`;
-        const faculty = faculties.find(f => f.id === req.facultyId);
-
-        addUser({
-          name: req.fullName,
-          email: req.referenceEmail,
-          role: 'Student',
-          facultyId: req.facultyId,
-          studentId,
-          universityEmail
-        });
-
-        // Send welcome email with credentials to the student's reference email
-        sendWelcomeEmail(
-          req.referenceEmail,
-          req.fullName,
-          studentId,
-          universityEmail,
-          req.nic,           // NIC is the initial password
-          faculty?.name ?? 'your faculty',
-          req.degreeName
-        );
-      }
+  const updateStudentRequestStatus = async (id: string, status: 'Approved' | 'Rejected'): Promise<{ success: boolean; message: string }> => {
+    const req = studentRequests.find(r => r.id === id);
+    if (!req) {
+      return { success: false, message: 'Request not found.' };
     }
+
+    setStudentRequests(studentRequests.map(r => r.id === id ? { ...r, status } : r));
+
+    if (status === 'Approved') {
+      const studentId = generateStudentId(req.facultyId);
+      const universityEmail = `${studentId}@unilms.lk`;
+      const faculty = faculties.find(f => f.id === req.facultyId);
+
+      addUser({
+        name: req.fullName,
+        email: req.referenceEmail,
+        role: 'Student',
+        facultyId: req.facultyId,
+        studentId,
+        universityEmail
+      });
+
+      const result = await sendWelcomeEmail(
+        req.referenceEmail,
+        req.fullName,
+        studentId,
+        universityEmail,
+        req.nic,           // NIC is the initial password
+        faculty?.name ?? 'your faculty',
+        req.degreeName
+      );
+
+      return result.success
+        ? { success: true, message: 'Offer email is sent' }
+        : { success: false, message: result.message };
+    }
+
+    return { success: true, message: 'Request rejected.' };
   };
 
   return (

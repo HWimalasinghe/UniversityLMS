@@ -88,8 +88,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Generate the next sequential student ID for a given faculty
   const generateStudentId = (facultyId: string): string => {
     const faculty = faculties.find(f => f.id === facultyId);
-    if (!faculty) return '';
-    const prefix = faculty.facultyCode.toUpperCase();
+    const prefix = faculty?.facultyCode?.toUpperCase() || 'STU'; // Fallback prefix
     const yearSuffix = new Date().getFullYear().toString().slice(-2); // e.g. "24"
     const pattern = `${prefix}${yearSuffix}`;
 
@@ -117,6 +116,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     degree: string
   ): Promise<{ success: boolean; message: string }> => {
     try {
+      console.log('Sending welcome email request to backend', { to, studentId, universityEmail, faculty, degree });
       const response = await fetch('http://localhost:5000/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,9 +125,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const responseData = await response.json();
       if (!response.ok) {
+        console.error('Email request failed', response.status, responseData);
         return { success: false, message: responseData?.error || responseData?.message || 'Failed to send email.' };
       }
 
+      console.log('Email request succeeded', responseData);
       return { success: true, message: responseData?.message || 'Offer email is sent' };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -191,7 +193,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (status === 'Approved') {
       const studentId = generateStudentId(req.facultyId);
       const universityEmail = `${studentId}@unilms.lk`;
+      
+      // Try to find faculty, use fallback if not found
       const faculty = faculties.find(f => f.id === req.facultyId);
+      const facultyName = faculty?.name || `Applied Program: ${req.degreeName}`;
 
       addUser({
         name: req.fullName,
@@ -208,7 +213,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         studentId,
         universityEmail,
         req.nic,           // NIC is the initial password
-        faculty?.name ?? 'your faculty',
+        facultyName,
         req.degreeName
       );
 

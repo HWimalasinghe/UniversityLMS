@@ -137,6 +137,8 @@ export default function Users() {
                 <th className="px-6 py-4 font-medium">Email</th>
                 <th className="px-6 py-4 font-medium">Role</th>
                 <th className="px-6 py-4 font-medium">Faculty</th>
+                <th className="px-6 py-4 font-medium">Student ID</th>
+                <th className="px-6 py-4 font-medium">University Email</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -152,6 +154,14 @@ export default function Users() {
                   </td>
                   <td className="px-6 py-4 text-gray-500">
                     {faculties.find(f => f.id === user.facultyId)?.name || '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    {user.studentId ? (
+                      <span className="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-xs font-bold">{user.studentId}</span>
+                    ) : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-gray-500">
+                    {user.universityEmail || '-'}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button

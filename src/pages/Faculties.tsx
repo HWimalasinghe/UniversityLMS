@@ -6,6 +6,7 @@ export default function Faculties() {
   const { faculties, addFaculty, degrees, addDegree } = useAppContext();
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
+  const [facultyCode, setFacultyCode] = useState('');
   const [description, setDescription] = useState('');
   const [newDegreeNames, setNewDegreeNames] = useState<Record<string, string>>({});
 
@@ -19,10 +20,11 @@ export default function Faculties() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && description) {
-      addFaculty({ name, description });
+    if (name && facultyCode && description) {
+      addFaculty({ name, facultyCode: facultyCode.toLowerCase(), description });
       setIsAdding(false);
       setName('');
+      setFacultyCode('');
       setDescription('');
     }
   };
@@ -51,8 +53,20 @@ export default function Faculties() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="e.g. Faculty of Arts"
+                placeholder="e.g. Faculty of Computing"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Faculty Identification Code</label>
+              <input
+                required
+                type="text"
+                value={facultyCode}
+                onChange={(e) => setFacultyCode(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g. it, eng, sc"
+              />
+              <p className="text-xs text-gray-400 mt-1">This code becomes the prefix for student IDs (e.g. "it" → IT26001)</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -88,7 +102,14 @@ export default function Faculties() {
           const facultyDegrees = degrees.filter(d => d.facultyId === faculty.id);
           return (
           <div key={faculty.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col">
-            <h3 className="text-lg font-semibold text-gray-900">{faculty.name}</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{faculty.name}</h3>
+              {faculty.facultyCode && (
+                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-mono font-bold uppercase border border-indigo-100">
+                  {faculty.facultyCode}
+                </span>
+              )}
+            </div>
             <p className="text-gray-500 text-sm mt-2 mb-4">{faculty.description}</p>
             
             <div className="flex-1 mt-2">

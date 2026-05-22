@@ -3,6 +3,7 @@ export type Role = 'Admin' | 'Faculty Dean' | 'Lecturer' | 'Assistant Lecturer' 
 export interface Faculty {
   id: string;
   name: string;
+  facultyCode: string; // e.g. 'it', 'cs', 'eng' — used as prefix in student IDs
   description: string;
   createdAt: string;
 }
@@ -19,6 +20,8 @@ export interface User {
   email: string;
   role: Role;
   facultyId: string | null; // null for admin or unassigned users
+  studentId?: string;       // e.g. IT2425001 — only for students
+  universityEmail?: string; // e.g. IT2425001@university.edu
   createdAt: string;
 }
 
@@ -29,14 +32,27 @@ export interface ExamDetails {
   year: string;
 }
 
+export interface OLExamDetails {
+  grades: {
+    A: number;
+    B: number;
+    C: number;
+    S: number;
+    F: number;
+  };
+  indexNumber: string;
+  year: string;
+}
+
 export interface StudentRequest {
   id: string;
   facultyId: string;
   degreeName: string;
   fullName: string;
+  nic: string;
   referenceEmail: string;
   advancedLevel: ExamDetails;
-  ordinaryLevel: ExamDetails;
+  ordinaryLevel: OLExamDetails;
   status: 'Pending' | 'Approved' | 'Rejected';
   createdAt: string;
 }

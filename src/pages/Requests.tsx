@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { Check, X, Clock } from 'lucide-react';
 
 export default function Requests() {
-  const { studentRequests, faculties, updateStudentRequestStatus } = useAppContext();
+  const { studentRequests, faculties, users, updateStudentRequestStatus } = useAppContext();
 
   return (
     <div className="space-y-6">
@@ -28,7 +28,7 @@ export default function Requests() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">{req.fullName}</h3>
-                        <p className="text-sm text-gray-500">{req.referenceEmail} • Applied on {new Date(req.createdAt).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-500">NIC: {req.nic} • {req.referenceEmail} • Applied on {new Date(req.createdAt).toLocaleDateString()}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
                         req.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -54,8 +54,23 @@ export default function Requests() {
 
                       <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 md:col-span-2">
                         <span className="font-semibold text-gray-900 block mb-1">O/L Examination</span>
-                        <p>Result: {req.ordinaryLevel.result} | Index: {req.ordinaryLevel.indexNumber} | Year: {req.ordinaryLevel.year}</p>
+                        <p className="mb-1">Index: {req.ordinaryLevel.indexNumber} | Year: {req.ordinaryLevel.year}</p>
+                        <p className="text-xs font-medium text-gray-700 bg-white inline-block px-2 py-1 rounded border border-gray-200">
+                          Grades: {req.ordinaryLevel.grades.A}A, {req.ordinaryLevel.grades.B}B, {req.ordinaryLevel.grades.C}C, {req.ordinaryLevel.grades.S}S, {req.ordinaryLevel.grades.F}F
+                        </p>
                       </div>
+
+                      {/* Show generated credentials for approved requests */}
+                      {req.status === 'Approved' && (() => {
+                        const student = users.find(u => u.role === 'Student' && u.email === req.referenceEmail && u.facultyId === req.facultyId);
+                        return student?.studentId ? (
+                          <div className="bg-green-50 p-3 rounded-lg border border-green-200 md:col-span-2">
+                            <span className="font-semibold text-green-800 block mb-1">Generated University Credentials</span>
+                            <p className="text-green-700">Student ID: <span className="font-mono font-bold">{student.studentId}</span></p>
+                            <p className="text-green-700">University Email: <span className="font-mono font-bold">{student.universityEmail}</span></p>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
 

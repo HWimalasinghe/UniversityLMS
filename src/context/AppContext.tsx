@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Faculty, Role, StudentRequest, Degree } from '../types';
 
 interface AppContextType {
@@ -32,12 +32,14 @@ const initialFaculties: Faculty[] = [
   {
     id: 'f1',
     name: 'Faculty of Science',
+    facultyCode: 'sc',
     description: 'Sciences and mathematics departments',
     createdAt: new Date().toISOString()
   },
   {
     id: 'f2',
     name: 'Faculty of Engineering',
+    facultyCode: 'eng',
     description: 'Engineering and technology departments',
     createdAt: new Date().toISOString()
   }
@@ -50,10 +52,80 @@ const initialDegrees: Degree[] = [
 ];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [faculties, setFaculties] = useState<Faculty[]>(initialFaculties);
-  const [degrees, setDegrees] = useState<Degree[]>(initialDegrees);
-  const [studentRequests, setStudentRequests] = useState<StudentRequest[]>([]);
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('lms_users');
+    return saved ? JSON.parse(saved) : initialUsers;
+  });
+  const [faculties, setFaculties] = useState<Faculty[]>(() => {
+    const saved = localStorage.getItem('lms_faculties');
+    return saved ? JSON.parse(saved) : initialFaculties;
+  });
+  const [degrees, setDegrees] = useState<Degree[]>(() => {
+    const saved = localStorage.getItem('lms_degrees');
+    return saved ? JSON.parse(saved) : initialDegrees;
+  });
+  const [studentRequests, setStudentRequests] = useState<StudentRequest[]>(() => {
+    const saved = localStorage.getItem('lms_requests');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('lms_users', JSON.stringify(users));
+  }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem('lms_faculties', JSON.stringify(faculties));
+  }, [faculties]);
+
+  useEffect(() => {
+    localStorage.setItem('lms_degrees', JSON.stringify(degrees));
+  }, [degrees]);
+
+  useEffect(() => {
+    localStorage.setItem('lms_requests', JSON.stringify(studentRequests));
+  }, [studentRequests]);
+
+  // Generate the next sequential student ID for a given faculty
+  const generateStudentId = (facultyId: string): string => {
+    const faculty = faculties.find(f => f.id === facultyId);
+    if (!faculty) return '';
+    const prefix = faculty.facultyCode.toUpperCase();
+    const yearSuffix = new Date().getFullYear().toString().slice(-2); // e.g. "24"
+    const pattern = `${prefix}${yearSuffix}`;
+
+    // Find all existing student IDs matching this prefix+year
+    const existingNumbers = users
+      .filter(u => u.studentId && u.studentId.toUpperCase().startsWith(pattern))
+      .map(u => {
+        const numPart = u.studentId!.slice(pattern.length);
+        return parseInt(numPart, 10);
+      })
+      .filter(n => !isNaN(n));
+
+    const nextNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+    return `${prefix}${yearSuffix}${nextNum.toString().padStart(3, '0')}`;
+  };
+
+  // Send welcome email via Express server
+  const sendWelcomeEmail = async (
+    to: string,
+    studentName: string,
+    studentId: string,
+    universityEmail: string,
+    password: string,
+    faculty: string,
+    degree: string
+  ) => {
+    try {
+      await fetch('http://localhost:5000/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, studentName, studentId, universityEmail, password, faculty, degree }),
+      });
+    } catch (err) {
+      console.warn('⚠️ Email service unavailable. Student created, but welcome email was not sent.', err);
+    }
+  };
 
   const addFaculty = (faculty: Omit<Faculty, 'id' | 'createdAt'>) => {
     const newFaculty: Faculty = {
@@ -104,12 +176,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (status === 'Approved') {
       const req = studentRequests.find(r => r.id === id);
       if (req) {
+        const studentId = generateStudentId(req.facultyId);
+        const universityEmail = `${studentId}@unilms.lk`;
+        const faculty = faculties.find(f => f.id === req.facultyId);
+
         addUser({
           name: req.fullName,
           email: req.referenceEmail,
           role: 'Student',
-          facultyId: req.facultyId
+          facultyId: req.facultyId,
+          studentId,
+          universityEmail
         });
+
+        // Send welcome email with credentials to the student's reference email
+        sendWelcomeEmail(
+          req.referenceEmail,
+          req.fullName,
+          studentId,
+          universityEmail,
+          req.nic,           // NIC is the initial password
+          faculty?.name ?? 'your faculty',
+          req.degreeName
+        );
       }
     }
   };

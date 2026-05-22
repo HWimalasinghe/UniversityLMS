@@ -11,6 +11,7 @@ export default function Landing() {
   const [facultyId, setFacultyId] = useState('');
   const [degreeName, setDegreeName] = useState('');
   const [fullName, setFullName] = useState('');
+  const [nic, setNic] = useState('');
   const [referenceEmail, setReferenceEmail] = useState('');
   
   // A/L State
@@ -20,18 +21,32 @@ export default function Landing() {
   const [alYear, setAlYear] = useState('');
 
   // O/L State
-  const [olResult, setOlResult] = useState('');
+  const [olA, setOlA] = useState(0);
+  const [olB, setOlB] = useState(0);
+  const [olC, setOlC] = useState(0);
+  const [olS, setOlS] = useState(0);
+  const [olF, setOlF] = useState(0);
   const [olIndex, setOlIndex] = useState('');
   const [olYear, setOlYear] = useState('');
 
+  const [formError, setFormError] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!facultyId || !degreeName || !fullName || !referenceEmail) return;
+    if (!facultyId || !degreeName || !fullName || !nic || !referenceEmail) return;
+
+    const totalSubjects = olA + olB + olC + olS + olF;
+    if (totalSubjects !== 9) {
+      setFormError('The total number of O/L grades must exactly equal 9 subjects.');
+      return;
+    }
+    setFormError('');
 
     addStudentRequest({
       facultyId,
       degreeName,
       fullName,
+      nic,
       referenceEmail,
       advancedLevel: {
         stream: alStream,
@@ -40,7 +55,7 @@ export default function Landing() {
         year: alYear
       },
       ordinaryLevel: {
-        result: olResult,
+        grades: { A: olA, B: olB, C: olC, S: olS, F: olF },
         indexNumber: olIndex,
         year: olYear
       }
@@ -100,10 +115,15 @@ export default function Landing() {
                 {/* Personal & Faculty Details */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Application Details</h3>
+                  {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">{formError}</div>}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                       <input required type="text" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">NIC Number</label>
+                      <input required type="text" value={nic} onChange={e => setNic(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Reference Email</label>
@@ -140,7 +160,14 @@ export default function Landing() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Stream</label>
-                      <input required type="text" value={alStream} onChange={e => setAlStream(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Science" />
+                      <select required value={alStream} onChange={e => setAlStream(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">-- Select Stream --</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="Bio">Bio</option>
+                        <option value="Commerce">Commerce</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Arts">Arts</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Result (Z-Score/Grades)</label>
@@ -160,11 +187,7 @@ export default function Landing() {
                 {/* Ordinary Level Details */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Ordinary Level (O/L) Examination</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Result Summary</label>
-                      <input required type="text" value={olResult} onChange={e => setOlResult(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. 9A" />
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Index Number</label>
                       <input required type="text" value={olIndex} onChange={e => setOlIndex(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
@@ -172,6 +195,31 @@ export default function Landing() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
                       <input required type="text" value={olYear} onChange={e => setOlYear(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="YYYY" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Result Summary (Total 9 Subjects)</label>
+                    <div className="grid grid-cols-5 gap-4">
+                      <div>
+                        <label className="block text-xs text-center text-gray-500 mb-1">A Grades</label>
+                        <input required type="number" min="0" max="9" value={olA} onChange={e => setOlA(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-center" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-center text-gray-500 mb-1">B Grades</label>
+                        <input required type="number" min="0" max="9" value={olB} onChange={e => setOlB(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-center" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-center text-gray-500 mb-1">C Grades</label>
+                        <input required type="number" min="0" max="9" value={olC} onChange={e => setOlC(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-center" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-center text-gray-500 mb-1">S Grades</label>
+                        <input required type="number" min="0" max="9" value={olS} onChange={e => setOlS(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-center" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-center text-gray-500 mb-1">F Grades</label>
+                        <input required type="number" min="0" max="9" value={olF} onChange={e => setOlF(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-center" />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -74,6 +74,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [users]);
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/users');
+        const data = await res.json();
+        if (data.success && data.users) {
+          const mappedUsers = data.users.map((u: any) => ({
+            ...u,
+            id: u._id,
+          }));
+          setUsers(mappedUsers);
+        }
+      } catch (err) {
+        console.error('Failed to fetch users from DB:', err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('lms_faculties', JSON.stringify(faculties));
   }, [faculties]);
 
@@ -103,13 +122,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDegrees([...degrees, newDegree]);
   };
 
-  const addUser = (user: Omit<User, 'id' | 'createdAt'>) => {
-    const newUser: User = {
-      ...user,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-    };
-    setUsers([...users, newUser]);
+  const addUser = async (user: Omit<User, 'id' | 'createdAt'>) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        console.error('Failed to save user to database:', responseData);
+        throw new Error('Database save failed');
+      }
+
+      const mongoId = responseData.user?._id || Math.random().toString(36).substr(2, 9);
+      
+      const newUser: User = {
+        ...user,
+        id: typeof mongoId === 'object' ? mongoId.$oid || String(mongoId) : String(mongoId),
+        createdAt: responseData.user?.createdAt || new Date().toISOString(),
+      };
+      
+      setUsers(prev => [...prev, newUser]);
+      console.log('✅ User saved to database:', newUser);
+    } catch (err) {
+      console.warn('⚠️ Failed to save user to database, falling back to local storage:', err);
+      const newUser: User = {
+        ...user,
+        id: Math.random().toString(36).substr(2, 9),
+        createdAt: new Date().toISOString(),
+      };
+      setUsers(prev => [...prev, newUser]);
+    }
   };
 
   const updateUser = (id: string, updates: Partial<User>) => {

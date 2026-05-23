@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   email: String,
   role: { type: String, enum: ['Admin', 'Faculty Dean', 'Lecturer', 'Assistant Lecturer', 'Instructor', 'Student'], default: 'Student' },
   facultyId: String,
+  facultyIds: [String],
   studentId: String,
   universityEmail: String,
   createdAt: { type: Date, default: Date.now },
@@ -291,10 +292,49 @@ app.post('/api/approve-request', async (req, res) => {
     });
 
     console.log(`✅ Request ${requestId} approved. Student ${studentId} created. Email sent to ${studentRequest.referenceEmail}`);
-    res.json({ success: true, message: 'Request approved and student created', studentId, universityEmail });
+    res.json({ success: true, message: 'Request approved and student created', studentId, universityEmail, user: newStudent });
   } catch (err) {
     console.error('❌ Approval error:', err.message);
     res.status(500).json({ error: 'Failed to approve request', details: err.message });
+  }
+});
+
+// ── POST /api/users ──────────────────────────────────────────────────────────
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, email, role, facultyId, facultyIds, studentId, universityEmail } = req.body;
+    
+    if (!name || !email || !role) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const newUser = new User({
+      name,
+      email,
+      role,
+      facultyId,
+      facultyIds,
+      studentId,
+      universityEmail
+    });
+    
+    await newUser.save();
+    console.log(`✅ New user created: ${name} (${role})`);
+    res.json({ success: true, message: 'User created successfully', user: newUser });
+  } catch (err) {
+    console.error('❌ User creation error:', err.message);
+    res.status(500).json({ error: 'Failed to create user', details: err.message });
+  }
+});
+
+// ── GET /api/users ──────────────────────────────────────────────────────────
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    res.json({ success: true, users });
+  } catch (err) {
+    console.error('❌ Fetch users error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch users', details: err.message });
   }
 });
 

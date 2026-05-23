@@ -20,6 +20,7 @@ export interface User {
   email: string;
   role: Role;
   facultyId: string | null; // null for admin or unassigned users
+  facultyIds?: string[];    // for roles that span multiple faculties (e.g. Lecturer)
   studentId?: string;       // e.g. IT2425001 — only for students
   universityEmail?: string; // e.g. IT2425001@university.edu
   createdAt: string;

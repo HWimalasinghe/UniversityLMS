@@ -31,7 +31,7 @@ export default function Landing() {
 
   const [formError, setFormError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!facultyId || !degreeName || !fullName || !nic || !referenceEmail) return;
 
@@ -42,7 +42,7 @@ export default function Landing() {
     }
     setFormError('');
 
-    addStudentRequest({
+    await addStudentRequest({
       facultyId,
       degreeName,
       fullName,

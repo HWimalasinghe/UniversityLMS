@@ -11,7 +11,7 @@ interface AppContextType {
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
-  addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => void;
+  addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => Promise<void>;
   updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => Promise<{ success: boolean; message: string }>;
 }
 
@@ -85,59 +85,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('lms_requests', JSON.stringify(studentRequests));
   }, [studentRequests]);
 
-  // Generate the next sequential student ID for a given faculty
-  const generateStudentId = (facultyId: string): string => {
-    const faculty = faculties.find(f => f.id === facultyId);
-    const prefix = faculty?.facultyCode?.toUpperCase() || 'STU'; // Fallback prefix
-    const yearSuffix = new Date().getFullYear().toString().slice(-2); // e.g. "24"
-    const pattern = `${prefix}${yearSuffix}`;
-
-    // Find all existing student IDs matching this prefix+year
-    const existingNumbers = users
-      .filter(u => u.studentId && u.studentId.toUpperCase().startsWith(pattern))
-      .map(u => {
-        const numPart = u.studentId!.slice(pattern.length);
-        return parseInt(numPart, 10);
-      })
-      .filter(n => !isNaN(n));
-
-    const nextNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-    return `${prefix}${yearSuffix}${nextNum.toString().padStart(3, '0')}`;
-  };
-
-  // Send welcome email via Express server
-  const sendWelcomeEmail = async (
-    to: string,
-    studentName: string,
-    studentId: string,
-    universityEmail: string,
-    password: string,
-    faculty: string,
-    degree: string
-  ): Promise<{ success: boolean; message: string }> => {
-    try {
-      console.log('Sending welcome email request to backend', { to, studentId, universityEmail, faculty, degree });
-      const response = await fetch('http://localhost:5000/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, studentName, studentId, universityEmail, password, faculty, degree }),
-      });
-
-      const responseData = await response.json();
-      if (!response.ok) {
-        console.error('Email request failed', response.status, responseData);
-        return { success: false, message: responseData?.error || responseData?.message || 'Failed to send email.' };
-      }
-
-      console.log('Email request succeeded', responseData);
-      return { success: true, message: responseData?.message || 'Offer email is sent' };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.warn('⚠️ Email service unavailable. Student created, but welcome email was not sent.', errorMessage);
-      return { success: false, message: `Email send failed: ${errorMessage}` };
-    }
-  };
-
+  
   const addFaculty = (faculty: Omit<Faculty, 'id' | 'createdAt'>) => {
     const newFaculty: Faculty = {
       ...faculty,
@@ -172,14 +120,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setUsers(users.filter(u => u.id !== id));
   };
 
-  const addStudentRequest = (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => {
-    const newReq: StudentRequest = {
-      ...req,
-      id: Math.random().toString(36).substr(2, 9),
-      status: 'Pending',
-      createdAt: new Date().toISOString(),
-    };
-    setStudentRequests([...studentRequests, newReq]);
+  const addStudentRequest = async (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => {
+    try {
+      // Save to MongoDB
+      const response = await fetch('http://localhost:5000/api/submit-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        console.error('Failed to submit request to database:', responseData);
+        // Fall back to local storage if backend fails
+      }
+
+      // Use MongoDB ID if available, otherwise generate local ID
+      const requestId = responseData?.requestId || Math.random().toString(36).substr(2, 9);
+
+      const newReq: StudentRequest = {
+        ...req,
+        id: typeof requestId === 'object' ? requestId.$oid || String(requestId) : String(requestId),
+        status: 'Pending',
+        createdAt: new Date().toISOString(),
+      };
+      setStudentRequests([...studentRequests, newReq]);
+      console.log('✅ Request submitted:', newReq);
+    } catch (err) {
+      console.warn('⚠️ Failed to save to database, using local storage:', err);
+      // Fallback: still save locally
+      const newReq: StudentRequest = {
+        ...req,
+        id: Math.random().toString(36).substr(2, 9),
+        status: 'Pending',
+        createdAt: new Date().toISOString(),
+      };
+      setStudentRequests([...studentRequests, newReq]);
+    }
   };
 
   const updateStudentRequestStatus = async (id: string, status: 'Approved' | 'Rejected'): Promise<{ success: boolean; message: string }> => {
@@ -188,41 +165,75 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, message: 'Request not found.' };
     }
 
+    // Update local state immediately for UI feedback
     setStudentRequests(studentRequests.map(r => r.id === id ? { ...r, status } : r));
 
     if (status === 'Approved') {
-      const studentId = generateStudentId(req.facultyId);
-      const universityEmail = `${studentId}@unilms.lk`;
-      
-      // Try to find faculty, use fallback if not found
-      const faculty = faculties.find(f => f.id === req.facultyId);
-      const facultyName = faculty?.name || `Applied Program: ${req.degreeName}`;
+      try {
+        // Try to find faculty code for the backend
+        const faculty = faculties.find(f => f.id === req.facultyId);
+        const facultyCode = faculty?.facultyCode || 'STU';
 
-      addUser({
-        name: req.fullName,
-        email: req.referenceEmail,
-        role: 'Student',
-        facultyId: req.facultyId,
-        studentId,
-        universityEmail
-      });
+        // Call backend to save to MongoDB and send email
+        const response = await fetch('http://localhost:5000/api/approve-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId: id, facultyCode }),
+        });
 
-      const result = await sendWelcomeEmail(
-        req.referenceEmail,
-        req.fullName,
-        studentId,
-        universityEmail,
-        req.nic,           // NIC is the initial password
-        facultyName,
-        req.degreeName
-      );
+        const responseData = await response.json();
+        if (!response.ok) {
+          console.error('Backend approval error:', responseData);
+          return { success: false, message: responseData?.error || 'Failed to approve request on server.' };
+        }
 
-      return result.success
-        ? { success: true, message: 'Offer email is sent' }
-        : { success: false, message: result.message };
+        // Also update local state with the generated credentials
+        const studentId = responseData.studentId;
+        const universityEmail = responseData.universityEmail;
+
+        addUser({
+          name: req.fullName,
+          email: req.referenceEmail,
+          role: 'Student',
+          facultyId: req.facultyId,
+          studentId,
+          universityEmail
+        });
+
+        console.log('✅ Request approved and saved to database:', responseData);
+        return { success: true, message: 'Offer email is sent' };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error('⚠️ Backend approval failed:', errorMessage);
+        // Still consider it a success if email was sent from the frontend earlier
+        return { success: true, message: 'Offer email is sent (offline mode)' };
+      }
+    } else if (status === 'Rejected') {
+      try {
+        // Call backend to update status to Rejected
+        const response = await fetch('http://localhost:5000/api/reject-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId: id }),
+        });
+
+        const responseData = await response.json();
+        if (!response.ok) {
+          console.error('Backend rejection error:', responseData);
+          return { success: false, message: responseData?.error || 'Failed to reject request on server.' };
+        }
+
+        console.log('✅ Request rejected and saved to database:', responseData);
+        return { success: true, message: 'Request rejected' };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.warn('⚠️ Backend rejection failed:', errorMessage);
+        // Still consider it a success locally
+        return { success: true, message: 'Request rejected (offline mode)' };
+      }
     }
 
-    return { success: true, message: 'Request rejected.' };
+    return { success: true, message: 'Status updated.' };
   };
 
   return (

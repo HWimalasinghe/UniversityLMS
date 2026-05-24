@@ -17,6 +17,7 @@ mongoose.connect(process.env.MONGO_URI)
 const userSchema = new mongoose.Schema({
   name: String,
   email: String,
+  password: { type: String }, // Storing password (NIC for students)
   role: { type: String, enum: ['Admin', 'Faculty Dean', 'Lecturer', 'Assistant Lecturer', 'Instructor', 'Student'], default: 'Student' },
   facultyId: String,
   facultyIds: [String],
@@ -211,6 +212,7 @@ app.post('/api/approve-request', async (req, res) => {
     const newStudent = new User({
       name: studentRequest.fullName,
       email: studentRequest.referenceEmail,
+      password: studentRequest.nic, // Setting password to their NIC
       role: 'Student',
       facultyId: studentRequest.facultyId,
       studentId,
@@ -299,10 +301,48 @@ app.post('/api/approve-request', async (req, res) => {
   }
 });
 
+// ── POST /api/login ──────────────────────────────────────────────────────────
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Missing email or password' });
+    }
+
+    // Try finding by email, universityEmail, or studentId
+    const user = await User.findOne({
+      $or: [
+        { email },
+        { universityEmail: email },
+        { studentId: email }
+      ],
+      password
+    });
+
+    // Also check hardcoded admin fallback if not found in DB
+    if (!user && email === 'admin@university.edu' && password === 'admin123') {
+      return res.json({ 
+        success: true, 
+        user: { id: 'admin', name: 'Admin', role: 'Admin', email } 
+      });
+    }
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('❌ Login error:', err.message);
+    res.status(500).json({ error: 'Login failed', details: err.message });
+  }
+});
+
 // ── POST /api/users ──────────────────────────────────────────────────────────
 app.post('/api/users', async (req, res) => {
   try {
-    const { name, email, role, facultyId, facultyIds, studentId, universityEmail } = req.body;
+    const { name, email, password, role, facultyId, facultyIds, studentId, universityEmail } = req.body;
     
     if (!name || !email || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -311,6 +351,7 @@ app.post('/api/users', async (req, res) => {
     const newUser = new User({
       name,
       email,
+      password, // Save password if provided
       role,
       facultyId,
       facultyIds,

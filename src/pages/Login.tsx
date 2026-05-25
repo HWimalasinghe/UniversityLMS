@@ -16,8 +16,10 @@ export default function Login() {
     if (result.success && result.user) {
       if (result.user.role === 'Student') {
         navigate('/student');
-      } else {
+      } else if (result.user.role === 'Admin') {
         navigate('/admin');
+      } else {
+        navigate('/staff');
       }
     } else {
       setError('Invalid email or password');

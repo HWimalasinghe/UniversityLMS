@@ -56,6 +56,18 @@ const studentRequestSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const StudentRequest = mongoose.model('StudentRequest', studentRequestSchema);
 
+const noticeSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  facultyId: String,
+  authorId: String,
+  authorName: String,
+  authorRole: String,
+  createdAt: { type: Date, default: Date.now },
+});
+
+const Notice = mongoose.model('Notice', noticeSchema);
+
 // Basic route to test the server
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running', db: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected' });
@@ -301,6 +313,31 @@ app.post('/api/approve-request', async (req, res) => {
   }
 });
 
+// ── POST /api/change-password ───────────────────────────────────────────────
+app.post('/api/change-password', async (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body;
+    
+    if (!email || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ email, password: currentPassword });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Incorrect current password' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+    
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('❌ Change password error:', err.message);
+    res.status(500).json({ error: 'Failed to update password', details: err.message });
+  }
+});
+
 // ── POST /api/login ──────────────────────────────────────────────────────────
 app.post('/api/login', async (req, res) => {
   try {
@@ -348,10 +385,14 @@ app.post('/api/users', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Default password logic: If no password is provided, use Role without spaces + '123'
+    const defaultPassword = role.replace(/\s+/g, '') + '123';
+    const finalPassword = password || defaultPassword;
+
     const newUser = new User({
       name,
       email,
-      password, // Save password if provided
+      password: finalPassword,
       role,
       facultyId,
       facultyIds,
@@ -442,6 +483,44 @@ app.get('/api/requests', async (req, res) => {
   } catch (err) {
     console.error('❌ Fetch requests error:', err.message);
     res.status(500).json({ error: 'Failed to fetch requests', details: err.message });
+  }
+});
+
+// ── POST /api/notices ──────────────────────────────────────────────────────
+app.post('/api/notices', async (req, res) => {
+  try {
+    const { title, content, facultyId, authorId, authorName, authorRole } = req.body;
+    
+    if (!title || !content || !facultyId || !authorId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const newNotice = new Notice({
+      title,
+      content,
+      facultyId,
+      authorId,
+      authorName,
+      authorRole
+    });
+
+    await newNotice.save();
+    console.log(`📣 New notice created by ${authorName} for faculty ${facultyId}`);
+    res.json({ success: true, message: 'Notice created successfully', notice: newNotice });
+  } catch (err) {
+    console.error('❌ Notice creation error:', err.message);
+    res.status(500).json({ error: 'Failed to create notice', details: err.message });
+  }
+});
+
+// ── GET /api/notices ──────────────────────────────────────────────────────
+app.get('/api/notices', async (req, res) => {
+  try {
+    const notices = await Notice.find().sort({ createdAt: -1 });
+    res.json({ success: true, notices });
+  } catch (err) {
+    console.error('❌ Fetch notices error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch notices', details: err.message });
   }
 });
 

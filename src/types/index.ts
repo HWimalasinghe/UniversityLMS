@@ -57,3 +57,14 @@ export interface StudentRequest {
   status: 'Pending' | 'Approved' | 'Rejected';
   createdAt: string;
 }
+
+export interface Notice {
+  _id: string;
+  title: string;
+  content: string;
+  facultyId: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: string;
+}

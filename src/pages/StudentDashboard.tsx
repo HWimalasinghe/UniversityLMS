@@ -2,17 +2,22 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { LogOut, GraduationCap, BookOpen, Clock, Building, User as UserIcon, Calendar, Bell } from 'lucide-react';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function StudentDashboard() {
   const { currentUser, logout } = useAuth();
-  const { faculties, degrees } = useAppContext();
+  const { faculties, degrees, notices } = useAppContext();
   const [activeTab, setActiveTab] = useState<'Courses' | 'Exams' | 'Notices' | 'Profile'>('Profile');
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   if (!currentUser) return null;
 
   // Find the student's specific faculty and degree programs
   const studentFaculty = faculties.find(f => f.id === currentUser.facultyId);
   const studentDegrees = degrees.filter(d => d.facultyId === currentUser.facultyId);
+  
+  // Get notices for the student's faculty
+  const facultyNotices = notices.filter(n => n.facultyId === currentUser.facultyId);
 
   const tabs = [
     { id: 'Courses', label: 'Courses', icon: BookOpen },
@@ -78,11 +83,21 @@ export default function StudentDashboard() {
           <>
             {/* Welcome Section */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
-              <div className="relative z-10">
-                <h2 className="text-3xl font-bold mb-2">Hello, {currentUser.name}!</h2>
-                <p className="text-indigo-100 text-lg max-w-2xl">
-                  Welcome to your UniLMS student dashboard. Here you can find all the details regarding your enrolled degree program and faculty information.
-                </p>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2">Hello, {currentUser.name}!</h2>
+                  <p className="text-indigo-100 text-lg max-w-2xl">
+                    Welcome to your UniLMS student dashboard. Here you can find all the details regarding your enrolled degree program and faculty information.
+                  </p>
+                </div>
+                <div>
+                  <button 
+                    onClick={() => setIsPasswordModalOpen(true)}
+                    className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/30"
+                  >
+                    Change Password
+                  </button>
+                </div>
               </div>
               <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-x-1/4 translate-y-1/4">
                 <GraduationCap className="w-64 h-64" />
@@ -191,14 +206,49 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === 'Notices' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <Bell className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Notice Board</h3>
-            <p className="text-gray-500">Important announcements from your faculty will appear here.</p>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <Bell className="w-5 h-5 mr-2 text-indigo-500" />
+                Notice Board
+              </h3>
+              
+              {facultyNotices.length > 0 ? (
+                <div className="space-y-4">
+                  {facultyNotices.map(notice => (
+                    <div key={notice._id} className="border border-gray-100 rounded-lg p-5 bg-gray-50 hover:bg-white transition-colors hover:shadow-md">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="font-bold text-gray-900 text-lg">{notice.title}</h4>
+                        <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100">
+                          {new Date(notice.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{notice.content}</p>
+                      <div className="mt-4 pt-3 border-t border-gray-200 text-sm text-gray-500 flex items-center">
+                        <UserIcon className="w-4 h-4 mr-1" />
+                        Posted by <span className="font-medium text-gray-700 ml-1">{notice.authorName}</span> 
+                        <span className="mx-2">•</span> 
+                        <span className="italic">{notice.authorRole}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p>There are no announcements for your faculty at this time.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
       </main>
+
+      <ChangePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
     </div>
   );
 }

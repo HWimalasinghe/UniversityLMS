@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Faculty, StudentRequest, Degree } from '../types';
+import { User, Faculty, StudentRequest, Degree, Notice } from '../types';
 
 interface AppContextType {
   users: User[];
   faculties: Faculty[];
   degrees: Degree[];
   studentRequests: StudentRequest[];
+  notices: Notice[];
   addFaculty: (faculty: Omit<Faculty, 'id' | 'createdAt'>) => void;
   addDegree: (degree: Omit<Degree, 'id'>) => void;
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
@@ -13,6 +14,8 @@ interface AppContextType {
   deleteUser: (id: string) => void;
   addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => Promise<void>;
   updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => Promise<{ success: boolean; message: string }>;
+  addNotice: (notice: Omit<Notice, '_id' | 'createdAt'>) => Promise<void>;
+  fetchData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -68,29 +71,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const saved = localStorage.getItem('lms_requests');
     return saved ? JSON.parse(saved) : [];
   });
+  const [notices, setNotices] = useState<Notice[]>([]);
 
   useEffect(() => {
     localStorage.setItem('lms_users', JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch('http://localhost:5000/api/users');
-        const data = await res.json();
-        if (data.success && data.users) {
-          const mappedUsers = data.users.map((u: any) => ({
-            ...u,
-            id: u._id,
-          }));
-          setUsers(mappedUsers);
-        }
-      } catch (err) {
-        console.error('Failed to fetch users from DB:', err);
-      }
-    };
-    fetchUsers();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const usersRes = await fetch('http://localhost:5000/api/users');
+      const usersData = await usersRes.json();
+      if (usersData.success && usersData.users) {
+        setUsers(usersData.users.map((u: any) => ({ ...u, id: u._id })));
+      }
+
+      const reqsRes = await fetch('http://localhost:5000/api/requests');
+      const reqsData = await reqsRes.json();
+      if (reqsData.requests) setStudentRequests(reqsData.requests);
+
+      const noticesRes = await fetch('http://localhost:5000/api/notices');
+      const noticesData = await noticesRes.json();
+      if (noticesData.notices) setNotices(noticesData.notices);
+    } catch (err) {
+      console.error('Failed to fetch data from DB:', err);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('lms_faculties', JSON.stringify(faculties));
@@ -131,10 +140,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const responseData = await response.json();
-      if (!response.ok) {
-        console.error('Failed to save user to database:', responseData);
-        throw new Error('Database save failed');
-      }
+      if (!response.ok) throw new Error('Database save failed');
 
       const mongoId = responseData.user?._id || Math.random().toString(36).substr(2, 9);
       
@@ -145,9 +151,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setUsers(prev => [...prev, newUser]);
-      console.log('✅ User saved to database:', newUser);
     } catch (err) {
-      console.warn('⚠️ Failed to save user to database, falling back to local storage:', err);
+      console.warn('⚠️ Failed to save user, using fallback:', err);
       const newUser: User = {
         ...user,
         id: Math.random().toString(36).substr(2, 9),
@@ -167,7 +172,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addStudentRequest = async (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => {
     try {
-      // Save to MongoDB
       const response = await fetch('http://localhost:5000/api/submit-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -175,12 +179,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const responseData = await response.json();
-      if (!response.ok) {
-        console.error('Failed to submit request to database:', responseData);
-        // Fall back to local storage if backend fails
-      }
-
-      // Use MongoDB ID if available, otherwise generate local ID
       const requestId = responseData?.requestId || Math.random().toString(36).substr(2, 9);
 
       const newReq: StudentRequest = {
@@ -190,10 +188,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         createdAt: new Date().toISOString(),
       };
       setStudentRequests([...studentRequests, newReq]);
-      console.log('✅ Request submitted:', newReq);
     } catch (err) {
-      console.warn('⚠️ Failed to save to database, using local storage:', err);
-      // Fallback: still save locally
       const newReq: StudentRequest = {
         ...req,
         id: Math.random().toString(36).substr(2, 9),
@@ -206,83 +201,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateStudentRequestStatus = async (id: string, status: 'Approved' | 'Rejected'): Promise<{ success: boolean; message: string }> => {
     const req = studentRequests.find(r => r.id === id);
-    if (!req) {
-      return { success: false, message: 'Request not found.' };
-    }
+    if (!req) return { success: false, message: 'Request not found.' };
 
-    // Update local state immediately for UI feedback
     setStudentRequests(studentRequests.map(r => r.id === id ? { ...r, status } : r));
 
-    if (status === 'Approved') {
-      try {
-        // Try to find faculty code for the backend
-        const faculty = faculties.find(f => f.id === req.facultyId);
-        const facultyCode = faculty?.facultyCode || 'STU';
-
-        // Call backend to save to MongoDB and send email
-        const response = await fetch('http://localhost:5000/api/approve-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId: id, facultyCode }),
-        });
-
-        const responseData = await response.json();
-        if (!response.ok) {
-          console.error('Backend approval error:', responseData);
-          return { success: false, message: responseData?.error || 'Failed to approve request on server.' };
-        }
-
-        // Also update local state with the generated credentials
-        const studentId = responseData.studentId;
-        const universityEmail = responseData.universityEmail;
-
+    try {
+      const endpoint = status === 'Approved' ? 'approve-request' : 'reject-request';
+      const response = await fetch(`http://localhost:5000/api/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: id, facultyCode: faculties.find(f => f.id === req.facultyId)?.facultyCode || 'STU' }),
+      });
+      const responseData = await response.json();
+      if (status === 'Approved' && response.ok) {
         addUser({
           name: req.fullName,
           email: req.referenceEmail,
           role: 'Student',
           facultyId: req.facultyId,
-          studentId,
-          universityEmail
+          studentId: responseData.studentId,
+          universityEmail: responseData.universityEmail
         });
-
-        console.log('✅ Request approved and saved to database:', responseData);
-        return { success: true, message: 'Offer email is sent' };
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error('⚠️ Backend approval failed:', errorMessage);
-        // Still consider it a success if email was sent from the frontend earlier
-        return { success: true, message: 'Offer email is sent (offline mode)' };
       }
-    } else if (status === 'Rejected') {
-      try {
-        // Call backend to update status to Rejected
-        const response = await fetch('http://localhost:5000/api/reject-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId: id }),
-        });
-
-        const responseData = await response.json();
-        if (!response.ok) {
-          console.error('Backend rejection error:', responseData);
-          return { success: false, message: responseData?.error || 'Failed to reject request on server.' };
-        }
-
-        console.log('✅ Request rejected and saved to database:', responseData);
-        return { success: true, message: 'Request rejected' };
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.warn('⚠️ Backend rejection failed:', errorMessage);
-        // Still consider it a success locally
-        return { success: true, message: 'Request rejected (offline mode)' };
-      }
+      return { success: response.ok, message: response.ok ? 'Status updated' : 'Error updating on server' };
+    } catch (err) {
+      return { success: true, message: 'Status updated (offline mode)' };
     }
+  };
 
-    return { success: true, message: 'Status updated.' };
+  const addNotice = async (notice: Omit<Notice, '_id' | 'createdAt'>) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notice),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotices(prev => [data.notice, ...prev]);
+      }
+    } catch (err) {
+      console.error('Error creating notice:', err);
+    }
   };
 
   return (
-    <AppContext.Provider value={{ users, faculties, degrees, studentRequests, addFaculty, addDegree, addUser, updateUser, deleteUser, addStudentRequest, updateStudentRequestStatus }}>
+    <AppContext.Provider value={{ users, faculties, degrees, studentRequests, notices, addFaculty, addDegree, addUser, updateUser, deleteUser, addStudentRequest, updateStudentRequestStatus, addNotice, fetchData }}>
       {children}
     </AppContext.Provider>
   );

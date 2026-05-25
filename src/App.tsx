@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Landing from './pages/Landing';
 import Requests from './pages/Requests';
 import StudentDashboard from './pages/StudentDashboard';
+import StaffDashboard from './pages/StaffDashboard';
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, currentUser } = useAuth();
@@ -22,6 +23,15 @@ const StudentRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, currentUser } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (currentUser?.role !== 'Student') return <Navigate to="/admin" replace />;
+  return <>{children}</>;
+};
+
+const StaffRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, currentUser } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (currentUser?.role === 'Student' || currentUser?.role === 'Admin') {
+    return <Navigate to={currentUser?.role === 'Student' ? '/student' : '/admin'} replace />;
+  }
   return <>{children}</>;
 };
 
@@ -40,6 +50,7 @@ export default function App() {
               <Route path="requests" element={<Requests />} />
             </Route>
             <Route path="/student" element={<StudentRoute><StudentDashboard /></StudentRoute>} />
+            <Route path="/staff" element={<StaffRoute><StaffDashboard /></StaffRoute>} />
           </Routes>
         </Router>
       </AppProvider>

@@ -68,3 +68,21 @@ export interface Notice {
   authorRole: string;
   createdAt: string;
 }
+
+export interface ModuleContent {
+  _id?: string;
+  title: string;
+  body: string;
+  createdAt?: string;
+}
+
+export interface Module {
+  _id: string;
+  title: string;
+  code: string;
+  degreeName: string;
+  facultyId: string;
+  assignedLecturers: string[];
+  content: ModuleContent[];
+  createdAt: string;
+}

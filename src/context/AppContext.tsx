@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Faculty, StudentRequest, Degree, Notice } from '../types';
+import { User, Faculty, StudentRequest, Degree, Notice, Module, ModuleContent } from '../types';
 
 interface AppContextType {
   users: User[];
@@ -7,6 +7,7 @@ interface AppContextType {
   degrees: Degree[];
   studentRequests: StudentRequest[];
   notices: Notice[];
+  modules: Module[];
   addFaculty: (faculty: Omit<Faculty, 'id' | 'createdAt'>) => void;
   addDegree: (degree: Omit<Degree, 'id'>) => void;
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
@@ -15,6 +16,9 @@ interface AppContextType {
   addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => Promise<void>;
   updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => Promise<{ success: boolean; message: string }>;
   addNotice: (notice: Omit<Notice, '_id' | 'createdAt'>) => Promise<void>;
+  addModule: (mod: Omit<Module, '_id' | 'createdAt' | 'assignedLecturers' | 'content'>) => Promise<void>;
+  assignLecturers: (moduleId: string, lecturers: string[]) => Promise<void>;
+  addModuleContent: (moduleId: string, content: ModuleContent) => Promise<void>;
   fetchData: () => Promise<void>;
 }
 
@@ -72,6 +76,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return saved ? JSON.parse(saved) : [];
   });
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
 
   useEffect(() => {
     localStorage.setItem('lms_users', JSON.stringify(users));
@@ -96,6 +101,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const noticesRes = await fetch('http://localhost:5000/api/notices');
       const noticesData = await noticesRes.json();
       if (noticesData.notices) setNotices(noticesData.notices);
+
+      const modulesRes = await fetch('http://localhost:5000/api/modules');
+      const modulesData = await modulesRes.json();
+      if (modulesData.modules) setModules(modulesData.modules);
     } catch (err) {
       console.error('Failed to fetch data from DB:', err);
     }
@@ -245,8 +254,61 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addModule = async (mod: Omit<Module, '_id' | 'createdAt' | 'assignedLecturers' | 'content'>) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mod),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setModules(prev => [data.module, ...prev]);
+      }
+    } catch (err) {
+      console.error('Error creating module:', err);
+    }
+  };
+
+  const assignLecturers = async (moduleId: string, lecturers: string[]) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/modules/${moduleId}/lecturers`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lecturers }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setModules(prev => prev.map(m => m._id === moduleId ? data.module : m));
+      }
+    } catch (err) {
+      console.error('Error assigning lecturers:', err);
+    }
+  };
+
+  const addModuleContent = async (moduleId: string, content: ModuleContent) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/modules/${moduleId}/content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(content),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setModules(prev => prev.map(m => m._id === moduleId ? data.module : m));
+      }
+    } catch (err) {
+      console.error('Error adding module content:', err);
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ users, faculties, degrees, studentRequests, notices, addFaculty, addDegree, addUser, updateUser, deleteUser, addStudentRequest, updateStudentRequestStatus, addNotice, fetchData }}>
+    <AppContext.Provider value={{ 
+      users, faculties, degrees, studentRequests, notices, modules, 
+      addFaculty, addDegree, addUser, updateUser, deleteUser, 
+      addStudentRequest, updateStudentRequestStatus, addNotice, 
+      addModule, assignLecturers, addModuleContent, fetchData 
+    }}>
       {children}
     </AppContext.Provider>
   );

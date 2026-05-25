@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema({
   facultyIds: [String],
   studentId: String,
   universityEmail: String,
+  degreeName: String,
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -67,6 +68,22 @@ const noticeSchema = new mongoose.Schema({
 });
 
 const Notice = mongoose.model('Notice', noticeSchema);
+
+const moduleSchema = new mongoose.Schema({
+  title: String,
+  code: String,
+  degreeName: String,
+  facultyId: String,
+  assignedLecturers: [String], // Array of user IDs
+  content: [{
+    title: String,
+    body: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
+  createdAt: { type: Date, default: Date.now },
+});
+
+const Module = mongoose.model('Module', moduleSchema);
 
 // Basic route to test the server
 app.get('/api/health', (req, res) => {
@@ -229,6 +246,7 @@ app.post('/api/approve-request', async (req, res) => {
       facultyId: studentRequest.facultyId,
       studentId,
       universityEmail,
+      degreeName: studentRequest.degreeName,
     });
     await newStudent.save();
 
@@ -521,6 +539,67 @@ app.get('/api/notices', async (req, res) => {
   } catch (err) {
     console.error('❌ Fetch notices error:', err.message);
     res.status(500).json({ error: 'Failed to fetch notices', details: err.message });
+  }
+});
+
+// ── GET /api/modules ──────────────────────────────────────────────────────
+app.get('/api/modules', async (req, res) => {
+  try {
+    const modules = await Module.find().sort({ createdAt: -1 });
+    res.json({ success: true, modules });
+  } catch (err) {
+    console.error('❌ Fetch modules error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch modules', details: err.message });
+  }
+});
+
+// ── POST /api/modules ──────────────────────────────────────────────────────
+app.post('/api/modules', async (req, res) => {
+  try {
+    const { title, code, degreeName, facultyId } = req.body;
+    if (!title || !code || !degreeName || !facultyId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const newModule = new Module({ title, code, degreeName, facultyId, assignedLecturers: [], content: [] });
+    await newModule.save();
+    res.json({ success: true, module: newModule });
+  } catch (err) {
+    console.error('❌ Create module error:', err.message);
+    res.status(500).json({ error: 'Failed to create module', details: err.message });
+  }
+});
+
+// ── PUT /api/modules/:id/lecturers ─────────────────────────────────────────
+app.put('/api/modules/:id/lecturers', async (req, res) => {
+  try {
+    const { lecturers } = req.body;
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Module not found' });
+    
+    mod.assignedLecturers = lecturers || [];
+    await mod.save();
+    res.json({ success: true, module: mod });
+  } catch (err) {
+    console.error('❌ Assign lecturers error:', err.message);
+    res.status(500).json({ error: 'Failed to assign lecturers', details: err.message });
+  }
+});
+
+// ── POST /api/modules/:id/content ──────────────────────────────────────────
+app.post('/api/modules/:id/content', async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (!title || !body) return res.status(400).json({ error: 'Missing title or body' });
+
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Module not found' });
+
+    mod.content.push({ title, body });
+    await mod.save();
+    res.json({ success: true, module: mod });
+  } catch (err) {
+    console.error('❌ Add content error:', err.message);
+    res.status(500).json({ error: 'Failed to add content', details: err.message });
   }
 });
 

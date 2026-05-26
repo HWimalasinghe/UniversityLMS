@@ -6,9 +6,12 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function StudentDashboard() {
   const { currentUser, logout } = useAuth();
-  const { faculties, degrees, notices } = useAppContext();
+  const { faculties, degrees, notices, modules } = useAppContext();
   const [activeTab, setActiveTab] = useState<'Courses' | 'Exams' | 'Notices' | 'Profile'>('Profile');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Selected module for viewing content
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
 
   if (!currentUser) return null;
 
@@ -18,6 +21,9 @@ export default function StudentDashboard() {
   
   // Get notices for the student's faculty
   const facultyNotices = notices.filter(n => n.facultyId === currentUser.facultyId);
+
+  // Get modules for the student's degree
+  const myModules = modules.filter(m => m.degreeName === currentUser.degreeName);
 
   const tabs = [
     { id: 'Courses', label: 'Courses', icon: BookOpen },
@@ -190,10 +196,59 @@ export default function StudentDashboard() {
         )}
 
         {activeTab === 'Courses' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">My Courses</h3>
-            <p className="text-gray-500">Your enrolled courses will appear here shortly.</p>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <BookOpen className="w-5 h-5 mr-2 text-indigo-500" />
+                My Enrolled Modules
+              </h3>
+              
+              {myModules.length > 0 ? (
+                <div className="space-y-4">
+                  {myModules.map(mod => (
+                    <div key={mod._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Module Header */}
+                      <div className="p-5 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors"
+                           onClick={() => setSelectedModuleId(selectedModuleId === mod._id ? null : mod._id)}>
+                        <div>
+                          <h4 className="text-lg font-bold text-gray-900">{mod.title} <span className="text-sm font-normal text-gray-500">({mod.code})</span></h4>
+                          <div className="text-sm text-indigo-600 font-medium">{mod.content.length} Lessons Available</div>
+                        </div>
+                        <button className="text-indigo-600 font-medium text-sm">
+                          {selectedModuleId === mod._id ? 'Hide Content' : 'View Content'}
+                        </button>
+                      </div>
+
+                      {/* Module Content Area */}
+                      {selectedModuleId === mod._id && (
+                        <div className="p-5 bg-white border-t border-gray-200 space-y-4">
+                          {mod.content.length > 0 ? (
+                            mod.content.map((lesson, idx) => (
+                              <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
+                                <h5 className="font-bold text-gray-900 mb-2 text-lg border-b border-gray-100 pb-2">{lesson.title}</h5>
+                                <p className="text-gray-700 whitespace-pre-wrap">{lesson.body}</p>
+                                <div className="text-xs text-gray-400 mt-3 pt-2 border-t border-gray-50">
+                                  Posted on {new Date(lesson.createdAt!).toLocaleDateString()}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-6 text-gray-500 italic">
+                              No materials have been uploaded for this module yet.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  <BookOpen className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p>You are not currently enrolled in any active modules for your degree.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

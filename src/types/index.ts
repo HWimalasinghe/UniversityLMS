@@ -66,6 +66,7 @@ export interface Notice {
   authorId: string;
   authorName: string;
   authorRole: string;
+  expiresAt?: string;
   createdAt: string;
 }
 

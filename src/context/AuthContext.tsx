@@ -17,7 +17,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('lms_user');
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...parsed, id: parsed._id || parsed.id };
+    }
+    return null;
   });
 
   const login = async (email: string, pass: string) => {
@@ -30,11 +34,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const data = await response.json();
       if (response.ok && data.success && data.user) {
+        const userWithId = { ...data.user, id: data.user._id || data.user.id };
         setIsAuthenticated(true);
-        setCurrentUser(data.user);
+        setCurrentUser(userWithId);
         localStorage.setItem('lms_auth', 'true');
-        localStorage.setItem('lms_user', JSON.stringify(data.user));
-        return { success: true, user: data.user };
+        localStorage.setItem('lms_user', JSON.stringify(userWithId));
+        return { success: true, user: userWithId };
       }
       return { success: false };
     } catch (err) {

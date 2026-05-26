@@ -64,6 +64,7 @@ const noticeSchema = new mongoose.Schema({
   authorId: String,
   authorName: String,
   authorRole: String,
+  expiresAt: { type: Date, expires: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -507,7 +508,7 @@ app.get('/api/requests', async (req, res) => {
 // ── POST /api/notices ──────────────────────────────────────────────────────
 app.post('/api/notices', async (req, res) => {
   try {
-    const { title, content, facultyId, authorId, authorName, authorRole } = req.body;
+    const { title, content, facultyId, authorId, authorName, authorRole, expiresAt } = req.body;
     
     if (!title || !content || !facultyId || !authorId) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -519,7 +520,8 @@ app.post('/api/notices', async (req, res) => {
       facultyId,
       authorId,
       authorName,
-      authorRole
+      authorRole,
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined
     });
 
     await newNotice.save();
@@ -528,6 +530,43 @@ app.post('/api/notices', async (req, res) => {
   } catch (err) {
     console.error('❌ Notice creation error:', err.message);
     res.status(500).json({ error: 'Failed to create notice', details: err.message });
+  }
+});
+
+// ── PUT /api/notices/:id ───────────────────────────────────────────────────
+app.put('/api/notices/:id', async (req, res) => {
+  try {
+    const { title, content, expiresAt } = req.body;
+    const notice = await Notice.findById(req.params.id);
+    if (!notice) return res.status(404).json({ error: 'Notice not found' });
+
+    if (title) notice.title = title;
+    if (content) notice.content = content;
+    
+    // Check if explicitly clearing expiration or setting a new one
+    if (expiresAt === null) {
+      notice.expiresAt = undefined;
+    } else if (expiresAt) {
+      notice.expiresAt = new Date(expiresAt);
+    }
+
+    await notice.save();
+    res.json({ success: true, notice });
+  } catch (err) {
+    console.error('❌ Notice update error:', err.message);
+    res.status(500).json({ error: 'Failed to update notice', details: err.message });
+  }
+});
+
+// ── DELETE /api/notices/:id ────────────────────────────────────────────────
+app.delete('/api/notices/:id', async (req, res) => {
+  try {
+    const notice = await Notice.findByIdAndDelete(req.params.id);
+    if (!notice) return res.status(404).json({ error: 'Notice not found' });
+    res.json({ success: true, message: 'Notice deleted successfully' });
+  } catch (err) {
+    console.error('❌ Notice deletion error:', err.message);
+    res.status(500).json({ error: 'Failed to delete notice', details: err.message });
   }
 });
 

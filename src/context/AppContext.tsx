@@ -16,6 +16,8 @@ interface AppContextType {
   addStudentRequest: (req: Omit<StudentRequest, 'id' | 'status' | 'createdAt'>) => Promise<void>;
   updateStudentRequestStatus: (id: string, status: 'Approved' | 'Rejected') => Promise<{ success: boolean; message: string }>;
   addNotice: (notice: Omit<Notice, '_id' | 'createdAt'>) => Promise<void>;
+  updateNotice: (id: string, updates: Partial<Notice>) => Promise<void>;
+  deleteNotice: (id: string) => Promise<void>;
   addModule: (mod: Omit<Module, '_id' | 'createdAt' | 'assignedLecturers' | 'content'>) => Promise<void>;
   assignLecturers: (moduleId: string, lecturers: string[]) => Promise<void>;
   addModuleContent: (moduleId: string, content: ModuleContent) => Promise<void>;
@@ -254,6 +256,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateNotice = async (id: string, updates: Partial<Notice>) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/notices/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotices(prev => prev.map(n => (n._id === id ? data.notice : n)));
+      }
+    } catch (err) {
+      console.error('Error updating notice:', err);
+    }
+  };
+
+  const deleteNotice = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/notices/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setNotices(prev => prev.filter(n => n._id !== id));
+      } else {
+        const errorData = await response.json();
+        alert('Failed to delete on server: ' + (errorData.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      console.error('Error deleting notice:', err);
+      alert('Network error while deleting notice: ' + err.message);
+    }
+  };
+
   const addModule = async (mod: Omit<Module, '_id' | 'createdAt' | 'assignedLecturers' | 'content'>) => {
     try {
       const response = await fetch('http://localhost:5000/api/modules', {
@@ -307,6 +342,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       users, faculties, degrees, studentRequests, notices, modules, 
       addFaculty, addDegree, addUser, updateUser, deleteUser, 
       addStudentRequest, updateStudentRequestStatus, addNotice, 
+      updateNotice, deleteNotice,
       addModule, assignLecturers, addModuleContent, fetchData 
     }}>
       {children}

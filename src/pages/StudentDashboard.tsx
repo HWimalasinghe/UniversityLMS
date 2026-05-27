@@ -15,9 +15,8 @@ export default function StudentDashboard() {
 
   if (!currentUser) return null;
 
-  // Find the student's specific faculty and degree programs
+  // Find the student's specific faculty
   const studentFaculty = faculties.find(f => f.id === currentUser.facultyId);
-  const studentDegrees = degrees.filter(d => d.facultyId === currentUser.facultyId);
   
   // Get notices for the student's faculty
   const facultyNotices = notices.filter(n => n.facultyId === currentUser.facultyId);
@@ -165,19 +164,15 @@ export default function StudentDashboard() {
                     </div>
                     
                     <div>
-                      <span className="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-2">Available Degree Programs</span>
-                      {studentDegrees.length > 0 ? (
-                        <ul className="space-y-2">
-                          {studentDegrees.map(degree => (
-                            <li key={degree.id} className="flex items-center text-gray-800 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                              <GraduationCap className="w-4 h-4 mr-2 text-indigo-400" />
-                              <span className="font-medium">{degree.name}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      <span className="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-2">Enrolled Degree Program</span>
+                      {currentUser.degreeName ? (
+                        <div className="flex items-center text-gray-800 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                          <GraduationCap className="w-4 h-4 mr-2 text-indigo-400" />
+                          <span className="font-medium">{currentUser.degreeName}</span>
+                        </div>
                       ) : (
                         <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-lg border border-gray-100">
-                          No specific degree programs listed for this faculty yet.
+                          No specific degree program requested yet.
                         </div>
                       )}
                     </div>

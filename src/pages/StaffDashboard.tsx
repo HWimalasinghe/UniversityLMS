@@ -44,7 +44,10 @@ export default function StaffDashboard() {
   const staffFaculties = currentUser.facultyIds?.map(id => faculties.find(f => f.id === id)).filter(Boolean) || [];
   
   const facultyDegrees = degrees.filter(d => d.facultyId === currentUser.facultyId);
-  const facultyLecturers = users.filter(u => u.facultyId === currentUser.facultyId && (u.role === 'Lecturer' || u.role === 'Assistant Lecturer'));
+  const facultyLecturers = users.filter(u => 
+    (u.facultyId === currentUser.facultyId || u.facultyIds?.includes(currentUser.facultyId as string)) && 
+    (u.role === 'Lecturer' || u.role === 'Assistant Lecturer')
+  );
 
   // Get modules related to the user
   const myModules = modules.filter(m => {
@@ -438,7 +441,7 @@ export default function StaffDashboard() {
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <h5 className="font-bold text-sm mb-2">Assign Lecturers / Assistant Lecturers</h5>
                           <div className="grid grid-cols-2 gap-2 mb-4">
-                            {facultyLecturers.map(lecturer => (
+                            {facultyLecturers.length > 0 ? facultyLecturers.map(lecturer => (
                               <label key={lecturer.id} className="flex items-center space-x-2 text-sm">
                                 <input
                                   type="checkbox"
@@ -451,7 +454,11 @@ export default function StaffDashboard() {
                                 />
                                 <span>{lecturer.name} ({lecturer.role})</span>
                               </label>
-                            ))}
+                            )) : (
+                              <div className="text-sm text-gray-500 col-span-2">
+                                No lecturers or assistant lecturers found in this faculty. Please create them first.
+                              </div>
+                            )}
                           </div>
                           <div className="flex space-x-2">
                             <button onClick={() => handleAssignLecturers(mod._id)} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm">Save Assignments</button>

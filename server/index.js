@@ -673,6 +673,76 @@ app.post('/api/modules/:id/content', upload.single('document'), async (req, res)
   }
 });
 
+// ── PUT /api/modules/:id/content/:contentId ─────────────────────────────────
+app.put('/api/modules/:id/content/:contentId', upload.single('document'), async (req, res) => {
+  try {
+    const { title, body, removeDocument } = req.body;
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Module not found' });
+
+    const contentItem = mod.content.id(req.params.contentId);
+    if (!contentItem) return res.status(404).json({ error: 'Content not found' });
+
+    if (title) contentItem.title = title;
+    if (body) contentItem.body = body;
+
+    // If removeDocument flag is set, delete the old file and clear references
+    if (removeDocument === 'true' && contentItem.fileUrl) {
+      const filePath = path.join(__dirname, contentItem.fileUrl);
+      fs.unlink(filePath, (err) => {
+        if (err) console.warn('⚠️ Could not delete file:', filePath, err.message);
+      });
+      contentItem.fileUrl = undefined;
+      contentItem.fileName = undefined;
+    }
+
+    // If a new file is uploaded, replace the old one
+    if (req.file) {
+      // Delete old file if present
+      if (contentItem.fileUrl) {
+        const oldFilePath = path.join(__dirname, contentItem.fileUrl);
+        fs.unlink(oldFilePath, (err) => {
+          if (err) console.warn('⚠️ Could not delete old file:', oldFilePath, err.message);
+        });
+      }
+      contentItem.fileUrl = `/uploads/${req.file.filename}`;
+      contentItem.fileName = req.file.originalname;
+    }
+
+    await mod.save();
+    res.json({ success: true, module: mod });
+  } catch (err) {
+    console.error('❌ Update content error:', err.message);
+    res.status(500).json({ error: 'Failed to update content', details: err.message });
+  }
+});
+
+// ── DELETE /api/modules/:id/content/:contentId ───────────────────────────────
+app.delete('/api/modules/:id/content/:contentId', async (req, res) => {
+  try {
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Module not found' });
+
+    const contentItem = mod.content.id(req.params.contentId);
+    if (!contentItem) return res.status(404).json({ error: 'Content not found' });
+
+    // Delete associated file if it exists
+    if (contentItem.fileUrl) {
+      const filePath = path.join(__dirname, contentItem.fileUrl);
+      fs.unlink(filePath, (err) => {
+        if (err) console.warn('⚠️ Could not delete file:', filePath, err.message);
+      });
+    }
+
+    contentItem.deleteOne();
+    await mod.save();
+    res.json({ success: true, module: mod });
+  } catch (err) {
+    console.error('❌ Delete content error:', err.message);
+    res.status(500).json({ error: 'Failed to delete content', details: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

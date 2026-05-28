@@ -20,7 +20,9 @@ interface AppContextType {
   deleteNotice: (id: string) => Promise<void>;
   addModule: (mod: Omit<Module, '_id' | 'createdAt' | 'assignedLecturers' | 'content'>) => Promise<void>;
   assignLecturers: (moduleId: string, lecturers: string[]) => Promise<void>;
-  addModuleContent: (moduleId: string, content: ModuleContent) => Promise<void>;
+  addModuleContent: (moduleId: string, content: ModuleContent | FormData) => Promise<void>;
+  updateModuleContent: (moduleId: string, contentId: string, data: FormData | object) => Promise<void>;
+  deleteModuleContent: (moduleId: string, contentId: string) => Promise<void>;
   fetchData: () => Promise<void>;
 }
 
@@ -338,13 +340,45 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateModuleContent = async (moduleId: string, contentId: string, data: FormData | object) => {
+    try {
+      const isFormData = data instanceof FormData;
+      const response = await fetch(`http://localhost:5000/api/modules/${moduleId}/content/${contentId}`, {
+        method: 'PUT',
+        headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+        body: isFormData ? data : JSON.stringify(data),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setModules(prev => prev.map(m => m._id === moduleId ? result.module : m));
+      }
+    } catch (err) {
+      console.error('Error updating module content:', err);
+    }
+  };
+
+  const deleteModuleContent = async (moduleId: string, contentId: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/modules/${moduleId}/content/${contentId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setModules(prev => prev.map(m => m._id === moduleId ? result.module : m));
+      }
+    } catch (err) {
+      console.error('Error deleting module content:', err);
+    }
+  };
+
   return (
     <AppContext.Provider value={{ 
       users, faculties, degrees, studentRequests, notices, modules, 
       addFaculty, addDegree, addUser, updateUser, deleteUser, 
       addStudentRequest, updateStudentRequestStatus, addNotice, 
       updateNotice, deleteNotice,
-      addModule, assignLecturers, addModuleContent, fetchData 
+      addModule, assignLecturers, addModuleContent,
+      updateModuleContent, deleteModuleContent, fetchData 
     }}>
       {children}
     </AppContext.Provider>

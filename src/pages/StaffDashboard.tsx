@@ -6,7 +6,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function StaffDashboard() {
   const { currentUser, logout } = useAuth();
-  const { faculties, degrees, notices, modules, users, addNotice, updateNotice, deleteNotice, addDegree, addModule, assignLecturers, addModuleContent } = useAppContext();
+  const { faculties, degrees, notices, modules, users, addNotice, updateNotice, deleteNotice, addDegree, addModule, assignLecturers, addModuleContent, updateModuleContent, deleteModuleContent } = useAppContext();
   const [activeTab, setActiveTab] = useState<'Courses' | 'Exams' | 'Notices' | 'Profile'>('Profile');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
@@ -36,6 +36,13 @@ export default function StaffDashboard() {
   const [contentBody, setContentBody] = useState('');
   const [contentFile, setContentFile] = useState<File | null>(null);
   const [selectedLecturers, setSelectedLecturers] = useState<string[]>([]);
+
+  // Content editing state
+  const [editingContentId, setEditingContentId] = useState<string | null>(null);
+  const [editContentTitle, setEditContentTitle] = useState('');
+  const [editContentBody, setEditContentBody] = useState('');
+  const [editContentFile, setEditContentFile] = useState<File | null>(null);
+  const [removeExistingDoc, setRemoveExistingDoc] = useState(false);
 
   if (!currentUser) return null;
 
@@ -170,7 +177,37 @@ export default function StaffDashboard() {
     setSelectedModuleId(null);
     alert('Lecturers assigned successfully!');
   };
-  
+
+  const startEditContent = (c: any) => {
+    setEditingContentId(c._id);
+    setEditContentTitle(c.title);
+    setEditContentBody(c.body);
+    setEditContentFile(null);
+    setRemoveExistingDoc(false);
+  };
+
+  const handleUpdateContent = async (moduleId: string, contentId: string) => {
+    if (!editContentTitle || !editContentBody) return;
+    let data: FormData | object;
+    if (editContentFile || removeExistingDoc) {
+      const fd = new FormData();
+      fd.append('title', editContentTitle);
+      fd.append('body', editContentBody);
+      if (removeExistingDoc) fd.append('removeDocument', 'true');
+      if (editContentFile) fd.append('document', editContentFile);
+      data = fd;
+    } else {
+      data = { title: editContentTitle, body: editContentBody };
+    }
+    await updateModuleContent(moduleId, contentId, data);
+    setEditingContentId(null);
+  };
+
+  const handleDeleteContent = async (moduleId: string, contentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this content?')) return;
+    await deleteModuleContent(moduleId, contentId);
+  };
+
   const tabs = [
     { id: 'Courses', label: 'Courses', icon: BookOpen },
     { id: 'Exams', label: 'Exams', icon: Calendar },
@@ -493,13 +530,93 @@ export default function StaffDashboard() {
                         <div className="mt-4 space-y-3">
                           <h5 className="font-bold text-gray-700 text-sm border-b pb-1">Module Content</h5>
                           {mod.content.map((c, i) => (
-                            <div key={i} className="bg-gray-50 p-3 rounded border border-gray-100">
-                              <div className="font-bold text-gray-900 text-sm">{c.title}</div>
-                              <div className="text-gray-600 text-sm whitespace-pre-wrap mt-1 mb-2">{c.body}</div>
-                              {c.fileUrl && (
-                                <a href={`http://localhost:5000${c.fileUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded">
-                                  📄 {c.fileName || 'Attached Document'}
-                                </a>
+                            <div key={c._id || i} className="bg-gray-50 rounded border border-gray-100 overflow-hidden">
+                              {editingContentId === c._id ? (
+                                /* ── Inline Edit Form ── */
+                                <div className="p-3 bg-yellow-50 border border-yellow-200 space-y-3">
+                                  <h6 className="font-bold text-sm text-yellow-900">Editing Lesson</h6>
+                                  <input
+                                    type="text"
+                                    value={editContentTitle}
+                                    onChange={e => setEditContentTitle(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="Lesson Title"
+                                  />
+                                  <textarea
+                                    rows={3}
+                                    value={editContentBody}
+                                    onChange={e => setEditContentBody(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="Lesson Content"
+                                  />
+                                  {c.fileUrl && (
+                                    <div className="flex items-center space-x-3 text-sm">
+                                      <span className="text-gray-600">📄 Current: {c.fileName}</span>
+                                      <label className="flex items-center space-x-1 text-red-600 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={removeExistingDoc}
+                                          onChange={e => setRemoveExistingDoc(e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>Remove document</span>
+                                      </label>
+                                    </div>
+                                  )}
+                                  {!removeExistingDoc && (
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        {c.fileUrl ? 'Replace Document (Optional)' : 'Attach Document (Optional)'}
+                                      </label>
+                                      <input
+                                        type="file"
+                                        onChange={e => setEditContentFile(e.target.files?.[0] || null)}
+                                        className="w-full text-sm text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleUpdateContent(mod._id, c._id!)}
+                                      className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700"
+                                    >
+                                      Save Changes
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingContentId(null)}
+                                      className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded text-sm hover:bg-gray-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ── Display View ── */
+                                <div className="p-3">
+                                  <div className="flex justify-between items-start">
+                                    <div className="font-bold text-gray-900 text-sm">{c.title}</div>
+                                    <div className="flex space-x-2 ml-2 flex-shrink-0">
+                                      <button
+                                        onClick={() => startEditContent(c)}
+                                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteContent(mod._id, c._id!)}
+                                        className="text-xs text-red-600 hover:text-red-800 font-medium bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="text-gray-600 text-sm whitespace-pre-wrap mt-1 mb-2">{c.body}</div>
+                                  {c.fileUrl && (
+                                    <a href={`http://localhost:5000${c.fileUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded">
+                                      📄 {c.fileName || 'Attached Document'}
+                                    </a>
+                                  )}
+                                </div>
                               )}
                             </div>
                           ))}

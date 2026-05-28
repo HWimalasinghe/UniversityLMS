@@ -33,7 +33,7 @@ export default function Login() {
           <Building2 className="h-12 w-12" />
         </div>
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
-          Sign in to UniLMS
+          Sign in to Blue Sky Aviation Academy
         </h2>
       </div>
 

@@ -92,7 +92,7 @@ export default function StudentDashboard() {
                 <div>
                   <h2 className="text-3xl font-bold mb-2">Hello, {currentUser.name}!</h2>
                   <p className="text-indigo-100 text-lg max-w-2xl">
-                    Welcome to your UniLMS student dashboard. Here you can find all the details regarding your enrolled degree program and faculty information.
+                    Welcome to your Blue Sky Aviation Academy student dashboard. Here you can find all the details regarding your enrolled degree program and faculty information.
                   </p>
                 </div>
                 <div>

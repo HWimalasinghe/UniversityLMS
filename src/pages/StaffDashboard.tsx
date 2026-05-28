@@ -223,7 +223,7 @@ export default function StaffDashboard() {
                 <div>
                   <h2 className="text-3xl font-bold mb-2">Hello, {currentUser.name}!</h2>
                   <p className="text-indigo-100 text-lg max-w-2xl">
-                    Welcome to your UniLMS Staff Dashboard. Here you can manage your profile, courses, and department communications.
+                    Welcome to your Blue Sky Aviation Academy Staff Dashboard. Here you can manage your profile, courses, and department communications.
                   </p>
                 </div>
                 <div>

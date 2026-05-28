@@ -26,7 +26,7 @@ export default function AdminLayout() {
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
           <div className="flex items-center gap-2 text-indigo-600">
             <Building2 className="h-6 w-6" />
-            <span className="text-xl font-bold">UniLMS Admin</span>
+            <span className="text-xl font-bold">Blue Sky Aviation Academy Admin</span>
           </div>
         </div>
         

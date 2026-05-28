@@ -120,9 +120,9 @@ app.post('/api/send-email', async (req, res) => {
   }
 
   const mailOptions = {
-    from: `"UniLMS Administration" <${mailSender}>`,
+    from: `"Blue Sky Aviation Academy Administration" <${mailSender}>`,
     to,
-    subject: '🎓 Your UniLMS Admission Has Been Approved!',
+    subject: '🎓 Your Blue Sky Aviation Academy Admission Has Been Approved!',
     html: `
       <!DOCTYPE html>
       <html>
@@ -133,7 +133,7 @@ app.post('/api/send-email', async (req, res) => {
               <!-- Header -->
               <tr>
                 <td style="background:linear-gradient(135deg,#4f46e5 0%,#6366f1 100%);padding:40px 40px 32px;text-align:center;">
-                  <div style="font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-1px;">🎓 UniLMS</div>
+                  <div style="font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-1px;">🎓 Blue Sky Aviation Academy</div>
                   <div style="color:#c7d2fe;font-size:14px;margin-top:4px;">University Learning Management System</div>
                 </td>
               </tr>
@@ -174,7 +174,7 @@ app.post('/api/send-email', async (req, res) => {
               <tr>
                 <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
                   <p style="margin:0;color:#9ca3af;font-size:12px;">
-                    This is an automated message from UniLMS. Please do not reply to this email.<br/>
+                    This is an automated message from Blue Sky Aviation Academy. Please do not reply to this email.<br/>
                     © ${new Date().getFullYear()} University Learning Management System
                   </p>
                 </td>
@@ -236,7 +236,7 @@ app.post('/api/approve-request', async (req, res) => {
 
     // Generate student ID
     const studentId = await generateStudentId(facultyCode, studentRequest.facultyId);
-    const universityEmail = `${studentId}@unilms.lk`;
+    const universityEmail = `${studentId}@bluesky.lk`;
 
     // Create student user in MongoDB
     const newStudent = new User({
@@ -257,9 +257,9 @@ app.post('/api/approve-request', async (req, res) => {
 
     // Send welcome email
     await transporter.sendMail({
-      from: `"UniLMS Administration" <${mailSender}>`,
+      from: `"Blue Sky Aviation Academy Administration" <${mailSender}>`,
       to: studentRequest.referenceEmail,
-      subject: '🎓 Your UniLMS Admission Has Been Approved!',
+      subject: '🎓 Your Blue Sky Aviation Academy Admission Has Been Approved!',
       html: `
         <!DOCTYPE html>
         <html>
@@ -270,7 +270,7 @@ app.post('/api/approve-request', async (req, res) => {
                 <!-- Header -->
                 <tr>
                   <td style="background:linear-gradient(135deg,#4f46e5 0%,#6366f1 100%);padding:40px 40px 32px;text-align:center;">
-                    <div style="font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-1px;">🎓 UniLMS</div>
+                    <div style="font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-1px;">🎓 Blue Sky Aviation Academy</div>
                     <div style="color:#c7d2fe;font-size:14px;margin-top:4px;">University Learning Management System</div>
                   </td>
                 </tr>
@@ -311,7 +311,7 @@ app.post('/api/approve-request', async (req, res) => {
                 <tr>
                   <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
                     <p style="margin:0;color:#9ca3af;font-size:12px;">
-                      This is an automated message from UniLMS. Please do not reply to this email.<br/>
+                      This is an automated message from Blue Sky Aviation Academy. Please do not reply to this email.<br/>
                       © ${new Date().getFullYear()} University Learning Management System
                     </p>
                   </td>

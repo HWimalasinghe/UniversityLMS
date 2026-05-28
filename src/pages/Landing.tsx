@@ -69,7 +69,7 @@ export default function Landing() {
       <header className="bg-white border-b border-gray-200 py-4 px-8 flex justify-between items-center">
         <div className="flex items-center gap-2 text-indigo-600">
           <Building2 className="h-8 w-8" />
-          <span className="text-2xl font-bold tracking-tight">UniLMS</span>
+          <span className="text-2xl font-bold tracking-tight">Blue Sky Aviation Academy</span>
         </div>
         <Link 
           to="/login"

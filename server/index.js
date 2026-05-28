@@ -2,11 +2,34 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// Configure multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Serve uploads statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -79,6 +102,8 @@ const moduleSchema = new mongoose.Schema({
   content: [{
     title: String,
     body: String,
+    fileUrl: String,
+    fileName: String,
     createdAt: { type: Date, default: Date.now }
   }],
   createdAt: { type: Date, default: Date.now },
@@ -625,7 +650,7 @@ app.put('/api/modules/:id/lecturers', async (req, res) => {
 });
 
 // ── POST /api/modules/:id/content ──────────────────────────────────────────
-app.post('/api/modules/:id/content', async (req, res) => {
+app.post('/api/modules/:id/content', upload.single('document'), async (req, res) => {
   try {
     const { title, body } = req.body;
     if (!title || !body) return res.status(400).json({ error: 'Missing title or body' });
@@ -633,7 +658,13 @@ app.post('/api/modules/:id/content', async (req, res) => {
     const mod = await Module.findById(req.params.id);
     if (!mod) return res.status(404).json({ error: 'Module not found' });
 
-    mod.content.push({ title, body });
+    const newContent = { title, body };
+    if (req.file) {
+      newContent.fileUrl = `/uploads/${req.file.filename}`;
+      newContent.fileName = req.file.originalname;
+    }
+
+    mod.content.push(newContent);
     await mod.save();
     res.json({ success: true, module: mod });
   } catch (err) {

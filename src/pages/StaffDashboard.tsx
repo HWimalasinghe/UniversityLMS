@@ -34,6 +34,7 @@ export default function StaffDashboard() {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [contentTitle, setContentTitle] = useState('');
   const [contentBody, setContentBody] = useState('');
+  const [contentFile, setContentFile] = useState<File | null>(null);
   const [selectedLecturers, setSelectedLecturers] = useState<string[]>([]);
 
   if (!currentUser) return null;
@@ -141,9 +142,21 @@ export default function StaffDashboard() {
   const handleAddContent = async (moduleId: string, e: React.FormEvent) => {
     e.preventDefault();
     if (!contentTitle || !contentBody) return;
-    await addModuleContent(moduleId, { title: contentTitle, body: contentBody });
+    
+    let submitData: any;
+    if (contentFile) {
+      submitData = new FormData();
+      submitData.append('title', contentTitle);
+      submitData.append('body', contentBody);
+      submitData.append('document', contentFile);
+    } else {
+      submitData = { title: contentTitle, body: contentBody };
+    }
+
+    await addModuleContent(moduleId, submitData);
     setContentTitle('');
     setContentBody('');
+    setContentFile(null);
     setSelectedModuleId(null);
     alert('Content added successfully!');
   };
@@ -457,6 +470,10 @@ export default function StaffDashboard() {
                           <div>
                             <textarea required placeholder="Lesson Content / Links" rows={3} value={contentBody} onChange={e => setContentBody(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
                           </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Attach Document (Optional)</label>
+                            <input type="file" onChange={e => setContentFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                          </div>
                           <div className="flex space-x-2">
                             <button type="submit" className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm">Add Content</button>
                             <button type="button" onClick={() => setSelectedModuleId(null)} className="bg-gray-200 text-gray-700 px-4 py-1.5 rounded text-sm">Cancel</button>
@@ -471,7 +488,12 @@ export default function StaffDashboard() {
                           {mod.content.map((c, i) => (
                             <div key={i} className="bg-gray-50 p-3 rounded border border-gray-100">
                               <div className="font-bold text-gray-900 text-sm">{c.title}</div>
-                              <div className="text-gray-600 text-sm whitespace-pre-wrap mt-1">{c.body}</div>
+                              <div className="text-gray-600 text-sm whitespace-pre-wrap mt-1 mb-2">{c.body}</div>
+                              {c.fileUrl && (
+                                <a href={`http://localhost:5000${c.fileUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded">
+                                  📄 {c.fileName || 'Attached Document'}
+                                </a>
+                              )}
                             </div>
                           ))}
                         </div>

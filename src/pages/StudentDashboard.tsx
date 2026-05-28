@@ -221,7 +221,12 @@ export default function StudentDashboard() {
                             mod.content.map((lesson, idx) => (
                               <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
                                 <h5 className="font-bold text-gray-900 mb-2 text-lg border-b border-gray-100 pb-2">{lesson.title}</h5>
-                                <p className="text-gray-700 whitespace-pre-wrap">{lesson.body}</p>
+                                <p className="text-gray-700 whitespace-pre-wrap mb-3">{lesson.body}</p>
+                                {lesson.fileUrl && (
+                                  <a href={`http://localhost:5000${lesson.fileUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-md border border-indigo-100">
+                                    📄 Download {lesson.fileName || 'Attached Document'}
+                                  </a>
+                                )}
                                 <div className="text-xs text-gray-400 mt-3 pt-2 border-t border-gray-50">
                                   Posted on {new Date(lesson.createdAt!).toLocaleDateString()}
                                 </div>

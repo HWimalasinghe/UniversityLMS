@@ -74,6 +74,8 @@ export interface ModuleContent {
   _id?: string;
   title: string;
   body: string;
+  fileUrl?: string;
+  fileName?: string;
   createdAt?: string;
 }
 

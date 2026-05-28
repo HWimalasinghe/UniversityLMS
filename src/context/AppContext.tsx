@@ -321,12 +321,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addModuleContent = async (moduleId: string, content: ModuleContent) => {
+  const addModuleContent = async (moduleId: string, content: ModuleContent | FormData) => {
     try {
+      const isFormData = content instanceof FormData;
       const response = await fetch(`http://localhost:5000/api/modules/${moduleId}/content`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(content),
+        headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+        body: isFormData ? content : JSON.stringify(content),
       });
       if (response.ok) {
         const data = await response.json();

@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema({
   studentId: String,
   universityEmail: String,
   degreeName: String,
+  academicYear: { type: Number, default: 1, min: 1, max: 4 },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -98,6 +99,7 @@ const moduleSchema = new mongoose.Schema({
   code: String,
   degreeName: String,
   facultyId: String,
+  academicYear: { type: Number, required: true },
   assignedLecturers: [String], // Array of user IDs
   content: [{
     title: String,
@@ -423,7 +425,7 @@ app.post('/api/login', async (req, res) => {
 // ── POST /api/users ──────────────────────────────────────────────────────────
 app.post('/api/users', async (req, res) => {
   try {
-    const { name, email, password, role, facultyId, facultyIds, studentId, universityEmail } = req.body;
+    const { name, email, password, role, facultyId, facultyIds, studentId, universityEmail, academicYear } = req.body;
     
     if (!name || !email || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -441,7 +443,8 @@ app.post('/api/users', async (req, res) => {
       facultyId,
       facultyIds,
       studentId,
-      universityEmail
+      universityEmail,
+      academicYear: role === 'Student' ? (academicYear || 1) : undefined
     });
     
     await newUser.save();
@@ -461,6 +464,25 @@ app.get('/api/users', async (req, res) => {
   } catch (err) {
     console.error('❌ Fetch users error:', err.message);
     res.status(500).json({ error: 'Failed to fetch users', details: err.message });
+  }
+});
+
+// ── PUT /api/users/:id ───────────────────────────────────────────────────────
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    const updates = req.body;
+    if (updates.academicYear !== undefined) user.academicYear = updates.academicYear;
+    if (updates.name !== undefined) user.name = updates.name;
+    // More fields can be updated as needed
+
+    await user.save();
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('❌ User update error:', err.message);
+    res.status(500).json({ error: 'Failed to update user', details: err.message });
   }
 });
 
@@ -620,11 +642,11 @@ app.get('/api/modules', async (req, res) => {
 // ── POST /api/modules ──────────────────────────────────────────────────────
 app.post('/api/modules', async (req, res) => {
   try {
-    const { title, code, degreeName, facultyId } = req.body;
-    if (!title || !code || !degreeName || !facultyId) {
+    const { title, code, degreeName, facultyId, academicYear } = req.body;
+    if (!title || !code || !degreeName || !facultyId || !academicYear) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    const newModule = new Module({ title, code, degreeName, facultyId, assignedLecturers: [], content: [] });
+    const newModule = new Module({ title, code, degreeName, facultyId, academicYear, assignedLecturers: [], content: [] });
     await newModule.save();
     res.json({ success: true, module: newModule });
   } catch (err) {

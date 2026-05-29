@@ -23,6 +23,7 @@ export interface User {
   facultyIds?: string[];    // for roles that span multiple faculties (e.g. Lecturer)
   studentId?: string;       // e.g. IT2425001 — only for students
   universityEmail?: string; // e.g. IT2425001@university.edu
+  academicYear?: number;    // 1 to 4
   createdAt: string;
 }
 
@@ -85,6 +86,7 @@ export interface Module {
   code: string;
   degreeName: string;
   facultyId: string;
+  academicYear: number;
   assignedLecturers: string[];
   content: ModuleContent[];
   createdAt: string;

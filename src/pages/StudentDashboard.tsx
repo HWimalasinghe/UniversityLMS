@@ -21,8 +21,11 @@ export default function StudentDashboard() {
   // Get notices for the student's faculty
   const facultyNotices = notices.filter(n => n.facultyId === currentUser.facultyId);
 
-  // Get modules for the student's degree
-  const myModules = modules.filter(m => m.degreeName === currentUser.degreeName);
+  // Get modules for the student's degree and academic year
+  const myModules = modules.filter(m => 
+    m.degreeName === currentUser.degreeName && 
+    m.academicYear === (currentUser.academicYear || 1)
+  );
 
   const tabs = [
     { id: 'Courses', label: 'Courses', icon: BookOpen },
@@ -136,6 +139,10 @@ export default function StudentDashboard() {
                   <li className="flex justify-between items-center">
                     <span className="text-gray-500 text-sm">Role</span>
                     <span className="font-medium text-gray-900">{currentUser.role}</span>
+                  </li>
+                  <li className="flex justify-between items-center">
+                    <span className="text-gray-500 text-sm">Academic Year</span>
+                    <span className="font-medium text-gray-900 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-sm font-bold">Year {currentUser.academicYear || 1}</span>
                   </li>
                   <li className="flex justify-between items-center">
                     <span className="text-gray-500 text-sm">Joined</span>

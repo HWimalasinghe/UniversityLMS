@@ -175,8 +175,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers(users.map(u => (u.id === id ? { ...u, ...updates } : u)));
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        setUsers(users.map(u => (u.id === id ? { ...u, ...updates } : u)));
+      }
+    } catch (err) {
+      console.error('Failed to update user', err);
+      // Fallback for offline mode
+      setUsers(users.map(u => (u.id === id ? { ...u, ...updates } : u)));
+    }
   };
 
   const deleteUser = (id: string) => {

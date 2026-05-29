@@ -4,7 +4,7 @@ import { Role, User } from '../types';
 import { Plus, Trash2, Users as UsersIcon } from 'lucide-react';
 
 export default function Users() {
-  const { users, faculties, addUser, deleteUser } = useAppContext();
+  const { users, faculties, addUser, deleteUser, updateUser } = useAppContext();
   const [isAdding, setIsAdding] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('All');
   
@@ -62,7 +62,10 @@ export default function Users() {
         )}
 
         {activeTab === 'Student' && (
-          <th className="px-6 py-4 font-medium">Student ID</th>
+          <>
+            <th className="px-6 py-4 font-medium">Student ID</th>
+            <th className="px-6 py-4 font-medium">Academic Year</th>
+          </>
         )}
         
         <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -96,11 +99,25 @@ export default function Users() {
         )}
 
         {activeTab === 'Student' && (
-          <td className="px-6 py-4">
-            {user.studentId ? (
-              <span className="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-xs font-bold">{user.studentId}</span>
-            ) : '-'}
-          </td>
+          <>
+            <td className="px-6 py-4">
+              {user.studentId ? (
+                <span className="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-xs font-bold">{user.studentId}</span>
+              ) : '-'}
+            </td>
+            <td className="px-6 py-4">
+              <select
+                value={user.academicYear || 1}
+                onChange={(e) => updateUser(user.id, { academicYear: Number(e.target.value) })}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value={1}>Year 1</option>
+                <option value={2}>Year 2</option>
+                <option value={3}>Year 3</option>
+                <option value={4}>Year 4</option>
+              </select>
+            </td>
+          </>
         )}
 
         <td className="px-6 py-4 text-right">

@@ -29,6 +29,7 @@ export default function StaffDashboard() {
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleCode, setModuleCode] = useState('');
   const [moduleDegreeName, setModuleDegreeName] = useState('');
+  const [moduleAcademicYear, setModuleAcademicYear] = useState(1);
 
   // Module actions state
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
@@ -142,10 +143,12 @@ export default function StaffDashboard() {
       code: moduleCode,
       degreeName: moduleDegreeName,
       facultyId: currentUser.facultyId,
+      academicYear: moduleAcademicYear,
     });
     setModuleTitle('');
     setModuleCode('');
     setModuleDegreeName('');
+    setModuleAcademicYear(1);
     alert('Module created successfully!');
   };
 
@@ -417,15 +420,29 @@ export default function StaffDashboard() {
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Degree Program</label>
-                      <select
-                        required value={moduleDegreeName} onChange={e => setModuleDegreeName(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">-- Select Degree --</option>
-                        {facultyDegrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
-                      </select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Degree Program</label>
+                        <select
+                          required value={moduleDegreeName} onChange={e => setModuleDegreeName(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">-- Select Degree --</option>
+                          {facultyDegrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Academic Year</label>
+                        <select
+                          required value={moduleAcademicYear} onChange={e => setModuleAcademicYear(Number(e.target.value))}
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value={1}>Year 1</option>
+                          <option value={2}>Year 2</option>
+                          <option value={3}>Year 3</option>
+                          <option value={4}>Year 4</option>
+                        </select>
+                      </div>
                     </div>
                     <button type="submit" className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
                       Add Module
@@ -449,7 +466,7 @@ export default function StaffDashboard() {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h4 className="text-lg font-bold text-gray-900">{mod.title} <span className="text-sm font-normal text-gray-500">({mod.code})</span></h4>
-                          <div className="text-sm text-indigo-600 font-medium">{mod.degreeName}</div>
+                          <div className="text-sm text-indigo-600 font-medium">{mod.degreeName} - Year {mod.academicYear}</div>
                         </div>
                         <div className="space-x-2">
                           {currentUser.role === 'Faculty Dean' && (

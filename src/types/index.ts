@@ -24,6 +24,7 @@ export interface User {
   studentId?: string;       // e.g. IT2425001 — only for students
   universityEmail?: string; // e.g. IT2425001@university.edu
   academicYear?: number;    // 1 to 4
+  enrolledModules?: string[]; // Array of module IDs
   createdAt: string;
 }
 

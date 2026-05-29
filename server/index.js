@@ -48,6 +48,7 @@ const userSchema = new mongoose.Schema({
   universityEmail: String,
   degreeName: String,
   academicYear: { type: Number, default: 1, min: 1, max: 4 },
+  enrolledModules: [String],
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -476,6 +477,7 @@ app.put('/api/users/:id', async (req, res) => {
     const updates = req.body;
     if (updates.academicYear !== undefined) user.academicYear = updates.academicYear;
     if (updates.name !== undefined) user.name = updates.name;
+    if (updates.enrolledModules !== undefined) user.enrolledModules = updates.enrolledModules;
     // More fields can be updated as needed
 
     await user.save();

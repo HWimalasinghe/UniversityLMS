@@ -6,7 +6,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function StudentDashboard() {
   const { currentUser, logout } = useAuth();
-  const { faculties, degrees, notices, modules } = useAppContext();
+  const { faculties, degrees, notices, modules, updateUser } = useAppContext();
   const [activeTab, setActiveTab] = useState<'Courses' | 'Exams' | 'Notices' | 'Profile'>('Profile');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
@@ -21,11 +21,19 @@ export default function StudentDashboard() {
   // Get notices for the student's faculty
   const facultyNotices = notices.filter(n => n.facultyId === currentUser.facultyId);
 
-  // Get modules for the student's degree and academic year
+  // Get modules for the student's degree and academic year (current and past years)
   const myModules = modules.filter(m => 
     m.degreeName === currentUser.degreeName && 
-    m.academicYear === (currentUser.academicYear || 1)
+    m.academicYear <= (currentUser.academicYear || 1)
   );
+
+  const enrolledModules = myModules.filter(m => currentUser.enrolledModules?.includes(m._id));
+  const availableModules = myModules.filter(m => !currentUser.enrolledModules?.includes(m._id));
+
+  const handleEnroll = async (moduleId: string) => {
+    const currentEnrolled = currentUser.enrolledModules || [];
+    await updateUser(currentUser.id, { enrolledModules: [...currentEnrolled, moduleId] });
+  };
 
   const tabs = [
     { id: 'Courses', label: 'Courses', icon: BookOpen },
@@ -199,15 +207,47 @@ export default function StudentDashboard() {
 
         {activeTab === 'Courses' && (
           <div className="space-y-6">
+            {/* Available Modules */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
                 <BookOpen className="w-5 h-5 mr-2 text-indigo-500" />
+                Available Modules to Enroll
+              </h3>
+              
+              {availableModules.length > 0 ? (
+                <div className="space-y-4">
+                  {availableModules.map(mod => (
+                    <div key={mod._id} className="border border-gray-200 rounded-lg p-5 bg-gray-50 flex justify-between items-center hover:bg-white transition-colors hover:shadow-sm">
+                      <div>
+                        <h4 className="text-lg font-bold text-gray-900">{mod.title} <span className="text-sm font-normal text-gray-500">({mod.code})</span></h4>
+                        <div className="text-sm text-indigo-600 font-medium">Year {mod.academicYear} Module</div>
+                      </div>
+                      <button 
+                        onClick={() => handleEnroll(mod._id)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                      >
+                        Enroll Now
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  <p>No new modules available for enrollment.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Enrolled Modules */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <GraduationCap className="w-5 h-5 mr-2 text-indigo-500" />
                 My Enrolled Modules
               </h3>
               
-              {myModules.length > 0 ? (
+              {enrolledModules.length > 0 ? (
                 <div className="space-y-4">
-                  {myModules.map(mod => (
+                  {enrolledModules.map(mod => (
                     <div key={mod._id} className="border border-gray-200 rounded-lg overflow-hidden">
                       {/* Module Header */}
                       <div className="p-5 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors"
@@ -252,7 +292,7 @@ export default function StudentDashboard() {
               ) : (
                 <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                   <BookOpen className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p>You are not currently enrolled in any active modules for your degree.</p>
+                  <p>You have not enrolled in any modules yet.</p>
                 </div>
               )}
             </div>

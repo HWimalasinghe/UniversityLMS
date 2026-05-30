@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Check, X, Clock } from 'lucide-react';
+import { Check, X, Clock, Search } from 'lucide-react';
 
 type Notification = {
   message: string;
@@ -10,6 +10,7 @@ type Notification = {
 export default function Requests() {
   const { studentRequests, faculties, users, updateStudentRequestStatus } = useAppContext();
   const [notification, setNotification] = React.useState<Notification | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -37,6 +38,20 @@ export default function Requests() {
         </div>
       )}
 
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400" />
+        </div>
+        <input
+          type="text"
+          placeholder="Search by name, email, NIC, or degree..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm"
+        />
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {studentRequests.length === 0 ? (
           <div className="p-12 text-center text-gray-500">
@@ -46,7 +61,14 @@ export default function Requests() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200 max-h-[calc(100vh-220px)] overflow-y-auto">
-            {studentRequests.slice().reverse().map((req) => (
+            {studentRequests
+              .filter(req => 
+                req.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                req.referenceEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                req.nic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                req.degreeName.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .slice().reverse().map((req) => (
               <div key={req.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col md:flex-row justify-between gap-6">
                   

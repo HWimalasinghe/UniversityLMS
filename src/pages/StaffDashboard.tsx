@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
-import { LogOut, BookOpen, Building, User as UserIcon, Calendar, Bell, ShieldCheck } from 'lucide-react';
+import { LogOut, BookOpen, Building, User as UserIcon, Users as UsersIcon, Calendar, Bell, ShieldCheck } from 'lucide-react';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import StudentStatusView from '../components/StudentStatusView';
 
 export default function StaffDashboard() {
   const { currentUser, logout } = useAuth();
   const { faculties, degrees, notices, modules, users, addNotice, updateNotice, deleteNotice, addDegree, addModule, assignLecturers, addModuleContent, updateModuleContent, deleteModuleContent } = useAppContext();
-  const [activeTab, setActiveTab] = useState<'Courses' | 'Exams' | 'Notices' | 'Profile'>('Profile');
+  const [activeTab, setActiveTab] = useState<'Courses' | 'Exams' | 'Notices' | 'Profile' | 'Student Status'>('Profile');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Notice form state
@@ -216,7 +217,11 @@ export default function StaffDashboard() {
     { id: 'Exams', label: 'Exams', icon: Calendar },
     { id: 'Notices', label: 'Notices', icon: Bell },
     { id: 'Profile', label: 'Profile', icon: UserIcon },
-  ] as const;
+  ];
+
+  if (currentUser.role === 'Faculty Dean') {
+    tabs.splice(3, 0, { id: 'Student Status', label: 'Student Status', icon: UsersIcon });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -812,6 +817,10 @@ export default function StaffDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'Student Status' && currentUser.role === 'Faculty Dean' && (
+          <StudentStatusView facultyId={currentUser.facultyId} />
         )}
 
       </main>

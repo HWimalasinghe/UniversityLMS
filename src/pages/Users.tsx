@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Role, User } from '../types';
 import { Plus, Trash2, Users as UsersIcon } from 'lucide-react';
+import StudentStatusView from '../components/StudentStatusView';
 
 export default function Users() {
   const { users, faculties, addUser, deleteUser, updateUser } = useAppContext();
@@ -15,7 +16,7 @@ export default function Users() {
   const [facultyIds, setFacultyIds] = useState<string[]>([]);
 
   const roles: Role[] = ['Admin', 'Faculty Dean', 'Lecturer', 'Assistant Lecturer', 'Instructor', 'Student'];
-  const tabs = ['All', ...roles];
+  const tabs = ['All', ...roles, 'Student Status'];
 
   const filteredUsers = activeTab === 'All' ? users : users.filter(u => u.role === activeTab);
 
@@ -273,6 +274,8 @@ export default function Users() {
             </div>
           ))}
         </div>
+      ) : activeTab === 'Student Status' ? (
+        <StudentStatusView facultyId={null} />
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">

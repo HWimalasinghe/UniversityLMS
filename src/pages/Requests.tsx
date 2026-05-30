@@ -45,7 +45,7 @@ export default function Requests() {
             <p>New student applications will appear here.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 max-h-[calc(100vh-220px)] overflow-y-auto">
             {studentRequests.slice().reverse().map((req) => (
               <div key={req.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col md:flex-row justify-between gap-6">
